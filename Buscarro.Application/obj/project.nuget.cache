@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "ZR0vtgBxoZk=",
+  "success": true,
+  "projectFilePath": "c:\\Users\\alexg\\repos\\buscarro.back\\Buscarro.Application\\Buscarro.Application.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\alexg\\.nuget\\packages\\mediatr\\12.5.0\\mediatr.12.5.0.nupkg.sha512",
+    "C:\\Users\\alexg\\.nuget\\packages\\mediatr.contracts\\2.0.1\\mediatr.contracts.2.0.1.nupkg.sha512",
+    "C:\\Users\\alexg\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.0\\microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

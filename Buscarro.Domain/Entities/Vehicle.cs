@@ -1,0 +1,20 @@
+namespace Buscarro.Domain.Entities;
+
+public class Vehicle
+{
+    public string ExternalId { get; set; } = string.Empty;
+    public string Provider { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Brand { get; set; } = string.Empty;
+    public string Model { get; set; } = string.Empty;
+    public string Version { get; set; } = string.Empty;
+    public int Year { get; set; }
+    public int Mileage { get; set; }
+    public string Fuel { get; set; } = string.Empty;
+    public string Transmission { get; set; } = string.Empty;
+    public string Color { get; set; } = string.Empty;
+    public decimal Price { get; set; }
+    public string City { get; set; } = string.Empty;
+    public string State { get; set; } = string.Empty;
+    public string Url { get; set; } = string.Empty;
+}

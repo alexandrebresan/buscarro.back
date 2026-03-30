@@ -1,0 +1,38 @@
+using Buscarro.Application.Queries;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Buscarro.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class VehiclesController : ControllerBase
+{
+    private readonly IMediator _mediator;
+
+    public VehiclesController(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> FindAll(CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new FindAllVehiclesQuery(), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("years")]
+    public async Task<IActionResult> GetYears(CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetVehicleYearsQuery(), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("brands")]
+    public async Task<IActionResult> GetBrands(CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetVehicleBrandsQuery(), cancellationToken);
+        return Ok(result);
+    }
+}

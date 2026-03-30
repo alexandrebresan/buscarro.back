@@ -1,0 +1,17 @@
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\bin\Debug\net9.0\Buscarro.Infrastructure.deps.json
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\bin\Debug\net9.0\Buscarro.Infrastructure.dll
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\bin\Debug\net9.0\Buscarro.Infrastructure.pdb
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\bin\Debug\net9.0\Buscarro.Domain.dll
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\bin\Debug\net9.0\Buscarro.Domain.pdb
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\obj\Debug\net9.0\Buscarro.Infrastructure.csproj.AssemblyReference.cache
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\obj\Debug\net9.0\Buscarro.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\obj\Debug\net9.0\Buscarro.Infrastructure.AssemblyInfoInputs.cache
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\obj\Debug\net9.0\Buscarro.Infrastructure.AssemblyInfo.cs
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\obj\Debug\net9.0\Buscarro.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\obj\Debug\net9.0\Buscarro.D5C90E75.Up2Date
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\obj\Debug\net9.0\Buscarro.Infrastructure.dll
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\obj\Debug\net9.0\refint\Buscarro.Infrastructure.dll
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\obj\Debug\net9.0\Buscarro.Infrastructure.pdb
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\obj\Debug\net9.0\ref\Buscarro.Infrastructure.dll
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\bin\Debug\net9.0\Buscarro.Application.dll
+C:\Users\alexg\repos\buscarro.back\Buscarro.Infrastructure\bin\Debug\net9.0\Buscarro.Application.pdb
