@@ -1,6 +1,8 @@
+using Buscarro.Application.DTOs;
 using Buscarro.Application.Interfaces;
 using Buscarro.Domain.Entities;
 using Buscarro.Infrastructure.Contracts;
+using System.Text.Json;
 
 namespace Buscarro.Infrastructure.Providers;
 
@@ -8,59 +10,62 @@ public sealed class ICarrosVehicleProvider : IVehicleProvider
 {
     public string ProviderName => "iCarros";
 
-    public async Task<IReadOnlyCollection<Vehicle>> GetVehiclesAsync(CancellationToken cancellationToken)
+    public async Task<VehicleProviderResult> GetVehiclesAsync(
+        VehicleSearchCriteria criteria,
+        CancellationToken cancellationToken)
     {
         var payload = await FetchMockResponseAsync(cancellationToken);
 
-        return payload.Vehicles
+        var vehicles = payload.Vehicles
             .Select(MapToVehicle)
             .ToArray();
+
+        return VehicleProviderSearch.Apply(vehicles, criteria);
     }
 
     private static async Task<ICarrosVehiclesResponseContract> FetchMockResponseAsync(CancellationToken cancellationToken)
     {
         await Task.Delay(TimeSpan.FromMilliseconds(65), cancellationToken);
 
-        return new ICarrosVehiclesResponseContract
-        {
-            Vehicles =
-            [
-                new ICarrosVehicleContract
-                {
-                    AdId = "ic-3001",
-                    Headline = "Chevrolet Onix Premier 1.0 Turbo",
-                    BrandName = "Chevrolet",
-                    ModelName = "Onix",
-                    Derivative = "Premier 1.0 Turbo",
-                    ProductionYear = 2024,
-                    MileageValue = 8000,
-                    FuelLabel = "Flex",
-                    TransmissionLabel = "Automatico",
-                    ColorLabel = "Preto",
-                    PriceValue = 109900m,
-                    LocationCity = "Florianopolis",
-                    LocationState = "SC",
-                    DetailUrl = "https://mock.icarros.com.br/veiculos/ic-3001"
-                },
-                new ICarrosVehicleContract
-                {
-                    AdId = "ic-3002",
-                    Headline = "Hyundai Creta Platinum 1.0 TGDI",
-                    BrandName = "Hyundai",
-                    ModelName = "Creta",
-                    Derivative = "Platinum 1.0 TGDI",
-                    ProductionYear = 2023,
-                    MileageValue = 19000,
-                    FuelLabel = "Flex",
-                    TransmissionLabel = "Automatico",
-                    ColorLabel = "Cinza",
-                    PriceValue = 154800m,
-                    LocationCity = "Goiania",
-                    LocationState = "GO",
-                    DetailUrl = "https://mock.icarros.com.br/veiculos/ic-3002"
-                }
-            ]
-        };
+        return JsonSerializer.Deserialize<ICarrosVehiclesResponseContract>(
+                   """
+                   {
+                     "vehicles": [
+                       {
+                         "ad_id": "ic-3001",
+                         "nome_carro": "Chevrolet Onix Premier 1.0 Turbo",
+                         "brand_name": "Chevrolet",
+                         "model_name": "Onix",
+                         "derivative": "Premier 1.0 Turbo",
+                         "production_year": 2024,
+                         "mileage_value": 8000,
+                         "fuel_label": "Flex",
+                         "transmission_label": "Automatico",
+                         "color_label": "Preto",
+                         "price_value": 109900,
+                         "location_city": "Florianopolis",
+                         "location_state": "SC",
+                         "detail_url": "https://mock.icarros.com.br/veiculos/ic-3001"
+                       },
+                       {
+                         "ad_id": "ic-3002",
+                         "nome_carro": "Hyundai Creta Platinum 1.0 TGDI",
+                         "brand_name": "Hyundai",
+                         "model_name": "Creta",
+                         "derivative": "Platinum 1.0 TGDI",
+                         "production_year": 2023,
+                         "mileage_value": 19000,
+                         "fuel_label": "Flex",
+                         "transmission_label": "Automatico",
+                         "color_label": "Cinza",
+                         "price_value": 154800,
+                         "location_city": "Goiania",
+                         "location_state": "GO",
+                         "detail_url": "https://mock.icarros.com.br/veiculos/ic-3002"
+                       }
+                     ]
+                   }
+                   """) ?? new ICarrosVehiclesResponseContract();
     }
 
     private Vehicle MapToVehicle(ICarrosVehicleContract source)
@@ -69,7 +74,7 @@ public sealed class ICarrosVehicleProvider : IVehicleProvider
         {
             ExternalId = source.AdId,
             Provider = ProviderName,
-            Title = source.Headline,
+            Title = source.NomeCarro,
             Brand = source.BrandName,
             Model = source.ModelName,
             Version = source.Derivative,
@@ -81,7 +86,8 @@ public sealed class ICarrosVehicleProvider : IVehicleProvider
             Price = source.PriceValue,
             City = source.LocationCity,
             State = source.LocationState,
-            Url = source.DetailUrl
+            Url = source.DetailUrl,
+            ImageUrl = string.Empty
         };
     }
 }

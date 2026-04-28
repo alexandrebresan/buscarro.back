@@ -1,4 +1,4 @@
-using Buscarro.Domain.Entities;
+using Buscarro.Application.DTOs;
 
 namespace Buscarro.Application.Interfaces;
 
@@ -6,5 +6,7 @@ public interface IVehicleProvider
 {
     string ProviderName { get; }
 
-    Task<IReadOnlyCollection<Vehicle>> GetVehiclesAsync(CancellationToken cancellationToken);
+    Task<VehicleProviderResult> GetVehiclesAsync(
+        VehicleSearchCriteria criteria,
+        CancellationToken cancellationToken);
 }

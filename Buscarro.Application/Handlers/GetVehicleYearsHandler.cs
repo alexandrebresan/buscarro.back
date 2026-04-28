@@ -6,20 +6,22 @@ using MediatR;
 namespace Buscarro.Application.Handlers;
 
 public sealed class GetVehicleYearsHandler
-    : VehicleQueryHandlerBase,
-        IRequestHandler<GetVehicleYearsQuery, IReadOnlyCollection<VehicleYearResponse>>
+    : IRequestHandler<GetVehicleYearsQuery, IReadOnlyCollection<VehicleYearResponse>>
 {
-    public GetVehicleYearsHandler(IEnumerable<IVehicleProvider> providers) : base(providers)
+    private readonly IVehicleCatalogReadService _vehicleCatalogReadService;
+
+    public GetVehicleYearsHandler(IVehicleCatalogReadService vehicleCatalogReadService)
     {
+        _vehicleCatalogReadService = vehicleCatalogReadService;
     }
 
     public async Task<IReadOnlyCollection<VehicleYearResponse>> Handle(
         GetVehicleYearsQuery request,
         CancellationToken cancellationToken)
     {
-        var vehicles = await LoadVehiclesAsync(cancellationToken);
+        var snapshot = await _vehicleCatalogReadService.GetSnapshotAsync(new VehicleSearchCriteria(), cancellationToken);
 
-        return vehicles
+        return snapshot.Vehicles
             .Select(vehicle => vehicle.Year)
             .Distinct()
             .OrderByDescending(year => year)

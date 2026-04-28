@@ -1,6 +1,8 @@
+using Buscarro.Application.DTOs;
 using Buscarro.Application.Interfaces;
 using Buscarro.Domain.Entities;
 using Buscarro.Infrastructure.Contracts;
+using System.Text.Json;
 
 namespace Buscarro.Infrastructure.Providers;
 
@@ -8,13 +10,17 @@ public sealed class OlxVehicleProvider : IVehicleProvider
 {
     public string ProviderName => "OLX";
 
-    public async Task<IReadOnlyCollection<Vehicle>> GetVehiclesAsync(CancellationToken cancellationToken)
+    public async Task<VehicleProviderResult> GetVehiclesAsync(
+        VehicleSearchCriteria criteria,
+        CancellationToken cancellationToken)
     {
         var payload = await FetchMockResponseAsync(cancellationToken);
 
-        return payload.Listings
+        var vehicles = payload.Listings
             .Select(MapToVehicle)
             .ToArray();
+
+        return VehicleProviderSearch.Apply(vehicles, criteria);
     }
 
     // Mantem a fronteira da integracao isolada para a troca futura pela API real.
@@ -22,46 +28,45 @@ public sealed class OlxVehicleProvider : IVehicleProvider
     {
         await Task.Delay(TimeSpan.FromMilliseconds(40), cancellationToken);
 
-        return new OlxVehiclesResponseContract
-        {
-            Listings =
-            [
-                new OlxVehicleContract
-                {
-                    Id = "olx-001",
-                    Subject = "Toyota Corolla XEi 2.0 Flex",
-                    Automaker = "Toyota",
-                    ModelName = "Corolla",
-                    Trim = "XEi 2.0 Flex",
-                    ModelYear = 2022,
-                    Kilometers = 32000,
-                    Fuel = "Flex",
-                    Gearbox = "Automatico",
-                    Paint = "Prata",
-                    Price = 129900m,
-                    City = "Sao Paulo",
-                    State = "SP",
-                    Link = "https://mock.olx.com.br/veiculos/olx-001"
-                },
-                new OlxVehicleContract
-                {
-                    Id = "olx-002",
-                    Subject = "Honda Civic EXL 2.0",
-                    Automaker = "Honda",
-                    ModelName = "Civic",
-                    Trim = "EXL 2.0",
-                    ModelYear = 2021,
-                    Kilometers = 41000,
-                    Fuel = "Flex",
-                    Gearbox = "Automatico",
-                    Paint = "Branco",
-                    Price = 118500m,
-                    City = "Campinas",
-                    State = "SP",
-                    Link = "https://mock.olx.com.br/veiculos/olx-002"
-                }
-            ]
-        };
+        return JsonSerializer.Deserialize<OlxVehiclesResponseContract>(
+                   """
+                   {
+                     "listings": [
+                       {
+                         "id": "olx-001",
+                         "car_name": "Toyota Corolla XEi 2.0 Flex",
+                         "automaker": "Toyota",
+                         "model_name": "Corolla",
+                         "trim": "XEi 2.0 Flex",
+                         "model_year": 2022,
+                         "km": 32000,
+                         "fuel": "Flex",
+                         "gearbox": "Automatico",
+                         "paint": "Prata",
+                         "price": 129900,
+                         "city": "Sao Paulo",
+                         "state": "SP",
+                         "link": "https://mock.olx.com.br/veiculos/olx-001"
+                       },
+                       {
+                         "id": "olx-002",
+                         "car_name": "Honda Civic EXL 2.0",
+                         "automaker": "Honda",
+                         "model_name": "Civic",
+                         "trim": "EXL 2.0",
+                         "model_year": 2021,
+                         "km": 41000,
+                         "fuel": "Flex",
+                         "gearbox": "Automatico",
+                         "paint": "Branco",
+                         "price": 118500,
+                         "city": "Campinas",
+                         "state": "SP",
+                         "link": "https://mock.olx.com.br/veiculos/olx-002"
+                       }
+                     ]
+                   }
+                   """) ?? new OlxVehiclesResponseContract();
     }
 
     private Vehicle MapToVehicle(OlxVehicleContract source)
@@ -70,7 +75,7 @@ public sealed class OlxVehicleProvider : IVehicleProvider
         {
             ExternalId = source.Id,
             Provider = ProviderName,
-            Title = source.Subject,
+            Title = source.CarName,
             Brand = source.Automaker,
             Model = source.ModelName,
             Version = source.Trim,
@@ -82,7 +87,8 @@ public sealed class OlxVehicleProvider : IVehicleProvider
             Price = source.Price,
             City = source.City,
             State = source.State,
-            Url = source.Link
+            Url = source.Link,
+            ImageUrl = string.Empty
         };
     }
 }

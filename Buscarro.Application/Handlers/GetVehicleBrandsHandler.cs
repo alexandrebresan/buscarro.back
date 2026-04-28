@@ -6,20 +6,22 @@ using MediatR;
 namespace Buscarro.Application.Handlers;
 
 public sealed class GetVehicleBrandsHandler
-    : VehicleQueryHandlerBase,
-        IRequestHandler<GetVehicleBrandsQuery, IReadOnlyCollection<VehicleBrandResponse>>
+    : IRequestHandler<GetVehicleBrandsQuery, IReadOnlyCollection<VehicleBrandResponse>>
 {
-    public GetVehicleBrandsHandler(IEnumerable<IVehicleProvider> providers) : base(providers)
+    private readonly IVehicleCatalogReadService _vehicleCatalogReadService;
+
+    public GetVehicleBrandsHandler(IVehicleCatalogReadService vehicleCatalogReadService)
     {
+        _vehicleCatalogReadService = vehicleCatalogReadService;
     }
 
     public async Task<IReadOnlyCollection<VehicleBrandResponse>> Handle(
         GetVehicleBrandsQuery request,
         CancellationToken cancellationToken)
     {
-        var vehicles = await LoadVehiclesAsync(cancellationToken);
+        var snapshot = await _vehicleCatalogReadService.GetSnapshotAsync(new VehicleSearchCriteria(), cancellationToken);
 
-        return vehicles
+        return snapshot.Vehicles
             .GroupBy(vehicle => vehicle.Brand, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First().Brand)
             .OrderBy(brand => brand)

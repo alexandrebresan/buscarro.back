@@ -17,4 +17,5 @@ public sealed class VehicleResponse
     public string City { get; set; } = string.Empty;
     public string State { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
+    public string ImageUrl { get; set; } = string.Empty;
 }

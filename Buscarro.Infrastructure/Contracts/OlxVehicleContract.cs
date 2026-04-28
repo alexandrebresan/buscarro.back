@@ -13,8 +13,8 @@ public sealed class OlxVehicleContract
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
 
-    [JsonPropertyName("subject")]
-    public string Subject { get; set; } = string.Empty;
+    [JsonPropertyName("car_name")]
+    public string CarName { get; set; } = string.Empty;
 
     [JsonPropertyName("automaker")]
     public string Automaker { get; set; } = string.Empty;

@@ -3,4 +3,9 @@ using MediatR;
 
 namespace Buscarro.Application.Queries;
 
-public sealed record FindAllVehiclesQuery : IRequest<IReadOnlyCollection<VehicleResponse>>;
+public sealed record FindAllVehiclesQuery(VehicleSearchCriteria Criteria) : IRequest<FindAllVehiclesResponse>
+{
+    public FindAllVehiclesQuery() : this(new VehicleSearchCriteria())
+    {
+    }
+}

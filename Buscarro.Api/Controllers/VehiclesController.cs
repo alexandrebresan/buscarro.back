@@ -1,3 +1,4 @@
+using Buscarro.Application.DTOs;
 using Buscarro.Application.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -16,9 +17,11 @@ public class VehiclesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> FindAll(CancellationToken cancellationToken)
+    public async Task<IActionResult> FindAll(
+        [FromQuery] VehicleSearchCriteria criteria,
+        CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new FindAllVehiclesQuery(), cancellationToken);
+        var result = await _mediator.Send(new FindAllVehiclesQuery(criteria), cancellationToken);
         return Ok(result);
     }
 

@@ -13,8 +13,8 @@ public sealed class ICarrosVehicleContract
     [JsonPropertyName("ad_id")]
     public string AdId { get; set; } = string.Empty;
 
-    [JsonPropertyName("headline")]
-    public string Headline { get; set; } = string.Empty;
+    [JsonPropertyName("nome_carro")]
+    public string NomeCarro { get; set; } = string.Empty;
 
     [JsonPropertyName("brand_name")]
     public string BrandName { get; set; } = string.Empty;

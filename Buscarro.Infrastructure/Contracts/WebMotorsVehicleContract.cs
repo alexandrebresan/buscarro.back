@@ -13,8 +13,8 @@ public sealed class WebMotorsVehicleContract
     [JsonPropertyName("ID")]
     public string ListingCode { get; set; } = string.Empty;
 
-    [JsonPropertyName("Title")]
-    public string Title { get; set; } = string.Empty;
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
 
     [JsonPropertyName("Make")]
     public string Make { get; set; } = string.Empty;

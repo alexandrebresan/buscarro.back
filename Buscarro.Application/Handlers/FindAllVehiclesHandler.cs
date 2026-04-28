@@ -6,38 +6,58 @@ using MediatR;
 namespace Buscarro.Application.Handlers;
 
 public sealed class FindAllVehiclesHandler
-    : VehicleQueryHandlerBase,
-        IRequestHandler<FindAllVehiclesQuery, IReadOnlyCollection<VehicleResponse>>
+    : IRequestHandler<FindAllVehiclesQuery, FindAllVehiclesResponse>
 {
-    public FindAllVehiclesHandler(IEnumerable<IVehicleProvider> providers) : base(providers)
+    private readonly IVehicleCatalogReadService _vehicleCatalogReadService;
+
+    public FindAllVehiclesHandler(IVehicleCatalogReadService vehicleCatalogReadService)
     {
+        _vehicleCatalogReadService = vehicleCatalogReadService;
     }
 
-    public async Task<IReadOnlyCollection<VehicleResponse>> Handle(
+    public async Task<FindAllVehiclesResponse> Handle(
         FindAllVehiclesQuery request,
         CancellationToken cancellationToken)
     {
-        var vehicles = await LoadVehiclesAsync(cancellationToken);
+        var snapshot = await _vehicleCatalogReadService.GetSnapshotAsync(request.Criteria, cancellationToken);
 
-        return vehicles
-            .Select(vehicle => new VehicleResponse
-            {
-                ExternalId = vehicle.ExternalId,
-                Provider = vehicle.Provider,
-                Title = vehicle.Title,
-                Brand = vehicle.Brand,
-                Model = vehicle.Model,
-                Version = vehicle.Version,
-                Year = vehicle.Year,
-                Mileage = vehicle.Mileage,
-                Fuel = vehicle.Fuel,
-                Transmission = vehicle.Transmission,
-                Color = vehicle.Color,
-                Price = vehicle.Price,
-                City = vehicle.City,
-                State = vehicle.State,
-                Url = vehicle.Url
-            })
-            .ToArray();
+        return new FindAllVehiclesResponse
+        {
+            Vehicles = snapshot.Vehicles
+                .Select(vehicle => new VehicleResponse
+                {
+                    ExternalId = vehicle.ExternalId,
+                    Provider = vehicle.Provider,
+                    Title = vehicle.Title,
+                    Brand = vehicle.Brand,
+                    Model = vehicle.Model,
+                    Version = vehicle.Version,
+                    Year = vehicle.Year,
+                    Mileage = vehicle.Mileage,
+                    Fuel = vehicle.Fuel,
+                    Transmission = vehicle.Transmission,
+                    Color = vehicle.Color,
+                    Price = vehicle.Price,
+                    City = vehicle.City,
+                    State = vehicle.State,
+                    Url = vehicle.Url,
+                    ImageUrl = vehicle.ImageUrl
+                })
+                .ToArray(),
+            Providers = snapshot.Providers
+                .Select(provider => new ProviderStatusResponse
+                {
+                    Provider = provider.Provider,
+                    Success = provider.Success,
+                    FromCache = provider.FromCache,
+                    UsedStaleCache = provider.UsedStaleCache,
+                    Error = provider.Error,
+                    CurrentResults = provider.CurrentResults,
+                    TotalResults = provider.TotalResults,
+                    CurrentPage = provider.CurrentPage,
+                    TotalPages = provider.TotalPages
+                })
+                .ToArray()
+        };
     }
 }
