@@ -350,3 +350,20 @@ Se tiver dúvida:
 → não inventar dados
 → separar responsabilidades
 → manter consistência
+
+## Regra de Execução de Agentes
+
+Toda execução deve passar pelo orquestrador.
+
+Fluxo obrigatório:
+1. Architect
+2. Implementer
+3. Reviewer
+
+Nenhuma implementação pode ser feita sem:
+- análise arquitetural prévia
+- revisão posterior
+
+O agente deve assumir automaticamente esse fluxo usando:
+
+.codex/agents/orchestrator.md

@@ -1,13 +1,28 @@
 using System.Diagnostics;
+using System.Text;
+using Buscarro.Api.Configurations;
 using Buscarro.Application.Interfaces;
 using Buscarro.Application.Queries;
+using Buscarro.Domain.Interfaces;
+using Buscarro.Infrastructure.Persistence;
 using Buscarro.Infrastructure.Providers;
+using Buscarro.Infrastructure.Repositories;
+using Buscarro.Infrastructure.Services;
+using Buscarro.Infrastructure.UnitOfWork;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
+
+var jwtOptions = builder.Configuration
+    .GetSection("Jwt")
+    .Get<JwtOptions>() ?? new JwtOptions();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -19,13 +34,61 @@ builder.Services.AddSwaggerGen(options =>
         Title = "Buscarro API",
         Version = "v1"
     });
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "Informe o token JWT usando o formato: Bearer {token}",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    });
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            []
+        }
+    });
 });
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(FindAllVehiclesQuery).Assembly));
 
-builder.Services.AddHttpClient<PokeApiProvider>();
-builder.Services.AddHttpClient<PokeDevsProvider>();
+builder.Services.AddDbContext<BuscarroDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("BuscarroDb")));
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IFavoriteVehicleRepository, FavoriteVehicleRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IPasswordHasherService, PasswordHasherService>();
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+    });
+builder.Services.AddAuthorization();
+
 builder.Services.AddHttpClient<CarzinVehicleProvider>((serviceProvider, client) =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<CarzinOptions>>().Value;
@@ -37,14 +100,6 @@ builder.Services.Configure<VehicleCacheOptions>(
 builder.Services.Configure<CarzinOptions>(
     builder.Configuration.GetSection("Carzin"));
 
-builder.Services.AddTransient<IPokemonApiService>(serviceProvider =>
-    serviceProvider.GetRequiredService<PokeApiProvider>());
-builder.Services.AddTransient<IPokemonApiService>(serviceProvider =>
-    serviceProvider.GetRequiredService<PokeDevsProvider>());
-
-builder.Services.AddTransient<IVehicleProvider, OlxVehicleProvider>();
-builder.Services.AddTransient<IVehicleProvider, WebMotorsVehicleProvider>();
-builder.Services.AddTransient<IVehicleProvider, ICarrosVehicleProvider>();
 builder.Services.AddTransient<IVehicleProvider>(serviceProvider =>
     serviceProvider.GetRequiredService<CarzinVehicleProvider>());
 builder.Services.AddSingleton<IVehicleCatalogReadService, VehicleCatalogReadService>();
@@ -83,6 +138,8 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();

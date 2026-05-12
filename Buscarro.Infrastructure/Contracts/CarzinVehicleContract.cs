@@ -28,6 +28,15 @@ public sealed class CarzinClassifiedContract
     [JsonPropertyName("title")]
     public string Title { get; set; } = string.Empty;
 
+    [JsonPropertyName("manufacturer")]
+    public string Manufacturer { get; set; } = string.Empty;
+
+    [JsonPropertyName("model")]
+    public string Model { get; set; } = string.Empty;
+
+    [JsonPropertyName("version")]
+    public string Version { get; set; } = string.Empty;
+
     [JsonPropertyName("manufacturer_id")]
     public int ManufacturerId { get; set; }
 
@@ -69,61 +78,4 @@ public sealed class CarzinClassifiedContract
 
     [JsonPropertyName("url")]
     public string Url { get; set; } = string.Empty;
-}
-
-public sealed class CarzinManufacturersResponseContract
-{
-    [JsonPropertyName("manufacturers")]
-    public List<CarzinManufacturerContract> Manufacturers { get; set; } = [];
-}
-
-public sealed class CarzinManufacturerContract
-{
-    [JsonPropertyName("id")]
-    public int Id { get; set; }
-
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
-
-    [JsonPropertyName("url")]
-    public string Url { get; set; } = string.Empty;
-}
-
-public sealed class CarzinModelsResponseContract
-{
-    [JsonPropertyName("models")]
-    public List<CarzinModelContract> Models { get; set; } = [];
-}
-
-public sealed class CarzinModelContract
-{
-    [JsonPropertyName("id")]
-    public int Id { get; set; }
-
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
-
-    [JsonPropertyName("year_min")]
-    public int? YearMin { get; set; }
-
-    [JsonPropertyName("year_max")]
-    public int? YearMax { get; set; }
-
-    [JsonPropertyName("url")]
-    public string Url { get; set; } = string.Empty;
-}
-
-public sealed class CarzinVersionsResponseContract
-{
-    [JsonPropertyName("versions")]
-    public List<CarzinVersionContract> Versions { get; set; } = [];
-}
-
-public sealed class CarzinVersionContract
-{
-    [JsonPropertyName("id")]
-    public int Id { get; set; }
-
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
 }

@@ -39,14 +39,7 @@ public sealed class CarzinVehicleProvider : IVehicleProvider
         }
 
         var type = criteria.Type <= 0 ? 1 : criteria.Type;
-        var resolved = await ResolveFiltersAsync(type, criteria, cancellationToken);
-
-        if (resolved.ShouldReturnEmpty)
-        {
-            return EmptyResult(criteria);
-        }
-
-        var fields = BuildSearchFields(type, criteria, resolved);
+        var fields = BuildSearchFields(type, criteria);
         var payload = await PostFormAsync<CarzinClassifiedSearchResponseContract>(
             "/api/classified-search",
             fields,
@@ -55,7 +48,7 @@ public sealed class CarzinVehicleProvider : IVehicleProvider
         return new VehicleProviderResult
         {
             Vehicles = payload.Results
-                .Select(result => MapToVehicle(result, resolved))
+                .Select(MapToVehicle)
                 .ToArray(),
             CurrentResults = payload.CurrentResults,
             TotalResults = payload.TotalResults,
@@ -64,101 +57,9 @@ public sealed class CarzinVehicleProvider : IVehicleProvider
         };
     }
 
-    private async Task<ResolvedCarzinFilters> ResolveFiltersAsync(
-        int type,
-        VehicleSearchCriteria criteria,
-        CancellationToken cancellationToken)
-    {
-        var resolved = new ResolvedCarzinFilters();
-
-        if (!string.IsNullOrWhiteSpace(criteria.Brand))
-        {
-            var manufacturers = await PostFormAsync<CarzinManufacturersResponseContract>(
-                "/api/classified-manufacturers",
-                new Dictionary<string, string>
-                {
-                    ["type"] = type.ToString(CultureInfo.InvariantCulture)
-                },
-                cancellationToken);
-
-            var manufacturer = FindByName(manufacturers.Manufacturers, criteria.Brand, item => item.Name);
-            if (manufacturer is null)
-            {
-                return resolved with { ShouldReturnEmpty = true };
-            }
-
-            resolved = resolved with
-            {
-                ManufacturerId = manufacturer.Id,
-                ManufacturerName = manufacturer.Name
-            };
-        }
-
-        if (!string.IsNullOrWhiteSpace(criteria.Model))
-        {
-            if (resolved.ManufacturerId is null)
-            {
-                return resolved with { ShouldReturnEmpty = true };
-            }
-
-            var models = await PostFormAsync<CarzinModelsResponseContract>(
-                "/api/classified-models",
-                new Dictionary<string, string>
-                {
-                    ["type"] = type.ToString(CultureInfo.InvariantCulture),
-                    ["manufacturer"] = resolved.ManufacturerId.Value.ToString(CultureInfo.InvariantCulture)
-                },
-                cancellationToken);
-
-            var model = FindByName(models.Models, criteria.Model, item => item.Name);
-            if (model is null)
-            {
-                return resolved with { ShouldReturnEmpty = true };
-            }
-
-            resolved = resolved with
-            {
-                ModelId = model.Id,
-                ModelName = model.Name
-            };
-        }
-
-        if (!string.IsNullOrWhiteSpace(criteria.Version))
-        {
-            if (resolved.ModelId is null)
-            {
-                return resolved with { ShouldReturnEmpty = true };
-            }
-
-            var versions = await PostFormAsync<CarzinVersionsResponseContract>(
-                "/api/classified-versions",
-                new Dictionary<string, string>
-                {
-                    ["type"] = type.ToString(CultureInfo.InvariantCulture),
-                    ["model"] = resolved.ModelId.Value.ToString(CultureInfo.InvariantCulture)
-                },
-                cancellationToken);
-
-            var version = FindByName(versions.Versions, criteria.Version, item => item.Name);
-            if (version is null)
-            {
-                return resolved with { ShouldReturnEmpty = true };
-            }
-
-            resolved = resolved with
-            {
-                VersionId = version.Id,
-                VersionName = version.Name
-            };
-        }
-
-        return resolved;
-    }
-
     private Dictionary<string, string> BuildSearchFields(
         int type,
-        VehicleSearchCriteria criteria,
-        ResolvedCarzinFilters resolved)
+        VehicleSearchCriteria criteria)
     {
         var fields = new Dictionary<string, string>
         {
@@ -178,21 +79,9 @@ public sealed class CarzinVehicleProvider : IVehicleProvider
         AddIfPresent(fields, "year_min", criteria.YearMin);
         AddIfPresent(fields, "year_max", criteria.YearMax);
         AddIfPresent(fields, "seller_type", criteria.SellerType);
-
-        if (resolved.ManufacturerId is not null)
-        {
-            fields["manufacturer"] = resolved.ManufacturerId.Value.ToString(CultureInfo.InvariantCulture);
-        }
-
-        if (resolved.ModelId is not null)
-        {
-            fields["model"] = resolved.ModelId.Value.ToString(CultureInfo.InvariantCulture);
-        }
-
-        if (resolved.VersionId is not null)
-        {
-            fields["version"] = resolved.VersionId.Value.ToString(CultureInfo.InvariantCulture);
-        }
+        AddIfPresent(fields, "manufacturer", criteria.Brand);
+        AddIfPresent(fields, "model", criteria.Model);
+        AddIfPresent(fields, "version", criteria.Version);
 
         return fields;
     }
@@ -220,17 +109,16 @@ public sealed class CarzinVehicleProvider : IVehicleProvider
     }
 
     private Vehicle MapToVehicle(
-        CarzinClassifiedContract source,
-        ResolvedCarzinFilters resolved)
+        CarzinClassifiedContract source)
     {
         return new Vehicle
         {
             ExternalId = source.Id.ToString(CultureInfo.InvariantCulture),
             Provider = ProviderName,
             Title = source.Title,
-            Brand = resolved.ManufacturerName ?? string.Empty,
-            Model = resolved.ModelName ?? string.Empty,
-            Version = resolved.VersionName ?? string.Empty,
+            Brand = source.Manufacturer,
+            Model = source.Model,
+            Version = source.Version,
             Year = source.YearModel > 0 ? source.YearModel : source.YearManufacture,
             Mileage = source.Mileage,
             Fuel = source.Fuel,
@@ -242,27 +130,6 @@ public sealed class CarzinVehicleProvider : IVehicleProvider
             Url = source.Url,
             ImageUrl = source.Image
         };
-    }
-
-    private static VehicleProviderResult EmptyResult(VehicleSearchCriteria criteria)
-    {
-        return new VehicleProviderResult
-        {
-            Vehicles = [],
-            CurrentResults = 0,
-            TotalResults = 0,
-            CurrentPage = Math.Max(1, criteria.Page),
-            TotalPages = 0
-        };
-    }
-
-    private static T? FindByName<T>(
-        IEnumerable<T> items,
-        string name,
-        Func<T, string> getName)
-    {
-        return items.FirstOrDefault(item =>
-            string.Equals(getName(item), name.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 
     private static void AddIfPresent(
@@ -297,13 +164,4 @@ public sealed class CarzinVehicleProvider : IVehicleProvider
             fields[name] = value.Value.ToString(CultureInfo.InvariantCulture);
         }
     }
-
-    private sealed record ResolvedCarzinFilters(
-        bool ShouldReturnEmpty = false,
-        int? ManufacturerId = null,
-        string? ManufacturerName = null,
-        int? ModelId = null,
-        string? ModelName = null,
-        int? VersionId = null,
-        string? VersionName = null);
 }
