@@ -11,6 +11,7 @@ namespace Buscarro.Infrastructure.Providers;
 public sealed class VehicleCatalogReadService : IVehicleCatalogReadService
 {
     private const string CacheKeyPrefix = "vehicles:provider";
+    private const string RecentVehicleCacheKeyPrefix = "vehicles:recent";
     private const string SanitizedProviderError = "Falha ao consultar os dados deste provider.";
 
     private readonly IMemoryCache _cache;
@@ -47,8 +48,30 @@ public sealed class VehicleCatalogReadService : IVehicleCatalogReadService
         });
 
         var providers = await Task.WhenAll(providerTasks);
+        var snapshot = ToSnapshot(providers, requestCriteria: criteria);
+        IndexRecentVehicles(snapshot.Vehicles);
 
-        return ToSnapshot(providers);
+        return snapshot;
+    }
+
+    public async Task<Vehicle?> FindVehicleByProviderAndExternalIdAsync(
+        string provider,
+        string externalId,
+        CancellationToken cancellationToken)
+    {
+        var cacheKey = BuildRecentVehicleKey(provider, externalId);
+
+        if (_cache.TryGetValue(cacheKey, out Vehicle? recentVehicle) && recentVehicle is not null)
+        {
+            return CloneVehicle(recentVehicle);
+        }
+
+        var snapshot = await GetSnapshotAsync(new VehicleSearchCriteria(), cancellationToken);
+
+        return snapshot.Vehicles
+            .FirstOrDefault(vehicle =>
+                IsSameText(vehicle.Provider, provider) &&
+                IsSameText(vehicle.ExternalId, externalId));
     }
 
     private async Task<VehicleProviderSnapshot> GetProviderSnapshotAsync(
@@ -77,7 +100,11 @@ public sealed class VehicleCatalogReadService : IVehicleCatalogReadService
             }
 
             var refreshedState = await LoadProviderStateAsync(provider, criteria, now, cancellationToken);
-            _cache.Set(cacheKey, refreshedState);
+
+            if (refreshedState.Success)
+            {
+                _cache.Set(cacheKey, refreshedState);
+            }
 
             return ToSnapshot(refreshedState, servedFromCurrentCache: false);
         }
@@ -154,17 +181,35 @@ public sealed class VehicleCatalogReadService : IVehicleCatalogReadService
         }
     }
 
-    private static VehicleCatalogSnapshot ToSnapshot(IReadOnlyCollection<VehicleProviderSnapshot> providers)
+    private static VehicleCatalogSnapshot ToSnapshot(
+        IReadOnlyCollection<VehicleProviderSnapshot> providers,
+        VehicleSearchCriteria requestCriteria)
     {
+        var filteredProviders = providers
+            .Select(provider => new VehicleProviderSnapshot
+            {
+                Provider = provider.Provider,
+                Vehicles = ApplyLocalFilters(provider.Vehicles, requestCriteria).ToArray(),
+                Success = provider.Success,
+                FromCache = provider.FromCache,
+                UsedStaleCache = provider.UsedStaleCache,
+                Error = provider.Error,
+                CurrentResults = provider.CurrentResults,
+                TotalResults = provider.TotalResults,
+                CurrentPage = provider.CurrentPage,
+                TotalPages = provider.TotalPages
+            })
+            .ToArray();
+
         return new VehicleCatalogSnapshot
         {
-            Vehicles = providers
+            Vehicles = filteredProviders
                 .SelectMany(provider => provider.Vehicles)
                 .OrderBy(vehicle => vehicle.Brand)
                 .ThenBy(vehicle => vehicle.Model)
                 .ThenByDescending(vehicle => vehicle.Year)
                 .ToArray(),
-            Providers = providers
+            Providers = filteredProviders
         };
     }
 
@@ -190,26 +235,56 @@ public sealed class VehicleCatalogReadService : IVehicleCatalogReadService
     private static Vehicle[] CloneVehicles(IEnumerable<Vehicle> vehicles)
     {
         return vehicles
-            .Select(vehicle => new Vehicle
-            {
-                ExternalId = vehicle.ExternalId,
-                Provider = vehicle.Provider,
-                Title = vehicle.Title,
-                Brand = vehicle.Brand,
-                Model = vehicle.Model,
-                Version = vehicle.Version,
-                Year = vehicle.Year,
-                Mileage = vehicle.Mileage,
-                Fuel = vehicle.Fuel,
-                Transmission = vehicle.Transmission,
-                Color = vehicle.Color,
-                Price = vehicle.Price,
-                City = vehicle.City,
-                State = vehicle.State,
-                Url = vehicle.Url,
-                ImageUrl = vehicle.ImageUrl
-            })
+            .Select(CloneVehicle)
             .ToArray();
+    }
+
+    private static IEnumerable<Vehicle> ApplyLocalFilters(
+        IEnumerable<Vehicle> vehicles,
+        VehicleSearchCriteria criteria)
+    {
+        return vehicles
+            .Where(vehicle => MatchesText(vehicle.State, criteria.State))
+            .Where(vehicle => criteria.PriceMin is null || vehicle.Price >= criteria.PriceMin.Value)
+            .Where(vehicle => criteria.PriceMax is null || vehicle.Price <= criteria.PriceMax.Value)
+            .Where(vehicle => criteria.YearMin is null || vehicle.Year >= criteria.YearMin.Value)
+            .Where(vehicle => criteria.YearMax is null || vehicle.Year <= criteria.YearMax.Value);
+    }
+
+    private void IndexRecentVehicles(IEnumerable<Vehicle> vehicles)
+    {
+        foreach (var vehicle in vehicles)
+        {
+            _cache.Set(
+                BuildRecentVehicleKey(vehicle.Provider, vehicle.ExternalId),
+                CloneVehicle(vehicle),
+                TimeSpan.FromMinutes(Math.Max(1, _options.DurationMinutes)));
+        }
+    }
+
+    private static Vehicle CloneVehicle(Vehicle vehicle)
+    {
+        return new Vehicle
+        {
+            ExternalId = vehicle.ExternalId,
+            Provider = vehicle.Provider,
+            Title = vehicle.Title,
+            Brand = vehicle.Brand,
+            Model = vehicle.Model,
+            Version = vehicle.Version,
+            Year = vehicle.Year,
+            Mileage = vehicle.Mileage,
+            Doors = vehicle.Doors,
+            Armored = vehicle.Armored,
+            Fuel = vehicle.Fuel,
+            Transmission = vehicle.Transmission,
+            Color = vehicle.Color,
+            Price = vehicle.Price,
+            City = vehicle.City,
+            State = vehicle.State,
+            Url = vehicle.Url,
+            ImageUrl = vehicle.ImageUrl
+        };
     }
 
     private DateTimeOffset GetFreshUntilUtc(string providerName, DateTimeOffset now)
@@ -227,23 +302,22 @@ public sealed class VehicleCatalogReadService : IVehicleCatalogReadService
             "|",
             CacheKeyPrefix,
             Normalize(providerName),
-            criteria.Type,
-            Normalize(criteria.Brand),
-            Normalize(criteria.Model),
-            Normalize(criteria.Version),
-            Normalize(criteria.Color),
-            Normalize(criteria.Fuel),
-            Normalize(criteria.Transmission),
+            Normalize(criteria.Query),
+            Normalize(criteria.Order),
+            Math.Max(1, criteria.Page),
+            Math.Max(1, criteria.Results),
             Normalize(criteria.State),
-            Normalize(criteria.City),
+            criteria.City?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+            criteria.Manufacturer?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+            criteria.Model?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+            criteria.Version?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
             criteria.PriceMin?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
             criteria.PriceMax?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
             criteria.YearMin?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
             criteria.YearMax?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
-            Normalize(criteria.Order),
-            Math.Max(1, criteria.Page),
-            Math.Max(1, criteria.Results),
-            criteria.SellerType?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty);
+            criteria.Color?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+            criteria.Gear?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+            criteria.Fuel?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty);
     }
 
     private static string Normalize(string? value)
@@ -251,6 +325,24 @@ public sealed class VehicleCatalogReadService : IVehicleCatalogReadService
         return string.IsNullOrWhiteSpace(value)
             ? string.Empty
             : value.Trim().ToUpperInvariant();
+    }
+
+    private static bool MatchesText(string actual, string? expected)
+    {
+        return string.IsNullOrWhiteSpace(expected) || IsSameText(actual, expected);
+    }
+
+    private static bool IsSameText(string actual, string expected)
+    {
+        return string.Equals(
+            actual.Trim(),
+            expected.Trim(),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildRecentVehicleKey(string provider, string externalId)
+    {
+        return string.Join("|", RecentVehicleCacheKeyPrefix, Normalize(provider), Normalize(externalId));
     }
 
     private sealed class VehicleProviderCacheState

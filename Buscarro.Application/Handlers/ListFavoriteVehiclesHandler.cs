@@ -45,6 +45,8 @@ public sealed class ListFavoriteVehiclesHandler
             Version = favorite.Version,
             Year = favorite.Year,
             Mileage = favorite.Mileage,
+            Doors = favorite.Doors,
+            Armored = favorite.Armored,
             Fuel = favorite.Fuel,
             Transmission = favorite.Transmission,
             Color = favorite.Color,

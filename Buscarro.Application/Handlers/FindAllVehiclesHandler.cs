@@ -34,6 +34,8 @@ public sealed class FindAllVehiclesHandler
                     Version = vehicle.Version,
                     Year = vehicle.Year,
                     Mileage = vehicle.Mileage,
+                    Doors = vehicle.Doors,
+                    Armored = vehicle.Armored,
                     Fuel = vehicle.Fuel,
                     Transmission = vehicle.Transmission,
                     Color = vehicle.Color,

@@ -11,6 +11,8 @@ public sealed class FavoriteVehicleResponse
     public string Version { get; init; } = string.Empty;
     public int Year { get; init; }
     public int Mileage { get; init; }
+    public int? Doors { get; init; }
+    public bool? Armored { get; init; }
     public string Fuel { get; init; } = string.Empty;
     public string Transmission { get; init; } = string.Empty;
     public string Color { get; init; } = string.Empty;

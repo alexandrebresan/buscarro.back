@@ -12,18 +12,15 @@ public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, A
 {
     private readonly IUserRepository _users;
     private readonly IPasswordHasherService _passwordHasher;
-    private readonly IJwtTokenService _jwtTokenService;
     private readonly IUnitOfWork _unitOfWork;
 
     public RegisterUserHandler(
         IUserRepository users,
         IPasswordHasherService passwordHasher,
-        IJwtTokenService jwtTokenService,
         IUnitOfWork unitOfWork)
     {
         _users = users;
         _passwordHasher = passwordHasher;
-        _jwtTokenService = jwtTokenService;
         _unitOfWork = unitOfWork;
     }
 
@@ -48,10 +45,10 @@ public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, A
         await _users.AddAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ToAuthResponse(user, _jwtTokenService.CreateToken(user));
+        return ToAuthResponse(user);
     }
 
-    private static AuthResponse ToAuthResponse(User user, AccessTokenResponse accessToken)
+    private static AuthResponse ToAuthResponse(User user)
     {
         return new AuthResponse
         {
@@ -60,8 +57,7 @@ public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, A
                 Id = user.Id,
                 Name = user.Name,
                 Email = user.Email
-            },
-            AccessToken = accessToken
+            }
         };
     }
 

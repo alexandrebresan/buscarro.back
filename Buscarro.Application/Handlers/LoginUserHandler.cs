@@ -12,16 +12,13 @@ public sealed class LoginUserHandler : IRequestHandler<LoginUserCommand, AuthRes
 {
     private readonly IUserRepository _users;
     private readonly IPasswordHasherService _passwordHasher;
-    private readonly IJwtTokenService _jwtTokenService;
 
     public LoginUserHandler(
         IUserRepository users,
-        IPasswordHasherService passwordHasher,
-        IJwtTokenService jwtTokenService)
+        IPasswordHasherService passwordHasher)
     {
         _users = users;
         _passwordHasher = passwordHasher;
-        _jwtTokenService = jwtTokenService;
     }
 
     public async Task<AuthResponse> Handle(LoginUserCommand request, CancellationToken cancellationToken)
@@ -35,10 +32,10 @@ public sealed class LoginUserHandler : IRequestHandler<LoginUserCommand, AuthRes
             throw new AuthenticationFailedException();
         }
 
-        return ToAuthResponse(user, _jwtTokenService.CreateToken(user));
+        return ToAuthResponse(user);
     }
 
-    private static AuthResponse ToAuthResponse(User user, AccessTokenResponse accessToken)
+    private static AuthResponse ToAuthResponse(User user)
     {
         return new AuthResponse
         {
@@ -47,8 +44,7 @@ public sealed class LoginUserHandler : IRequestHandler<LoginUserCommand, AuthRes
                 Id = user.Id,
                 Name = user.Name,
                 Email = user.Email
-            },
-            AccessToken = accessToken
+            }
         };
     }
 

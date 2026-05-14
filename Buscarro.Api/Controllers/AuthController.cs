@@ -9,6 +9,8 @@ namespace Buscarro.Api.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
+    private const string UserIdSessionKey = "UserId";
+
     private readonly IMediator _mediator;
 
     public AuthController(IMediator mediator)
@@ -29,6 +31,7 @@ public class AuthController : ControllerBase
         try
         {
             var result = await _mediator.Send(command, cancellationToken);
+            StoreCurrentUser(result.User.Id);
             return Created(string.Empty, result);
         }
         catch (ValidationException ex)
@@ -54,6 +57,7 @@ public class AuthController : ControllerBase
         try
         {
             var result = await _mediator.Send(command, cancellationToken);
+            StoreCurrentUser(result.User.Id);
             return Ok(result);
         }
         catch (ValidationException ex)
@@ -64,5 +68,10 @@ public class AuthController : ControllerBase
         {
             return Unauthorized(ex.Message);
         }
+    }
+
+    private void StoreCurrentUser(Guid userId)
+    {
+        HttpContext.Session.SetString(UserIdSessionKey, userId.ToString());
     }
 }

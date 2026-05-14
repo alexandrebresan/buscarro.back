@@ -366,4 +366,4 @@ Nenhuma implementação pode ser feita sem:
 
 O agente deve assumir automaticamente esse fluxo usando:
 
-.codex/agents/orchestrator.md
+orchestrator.md

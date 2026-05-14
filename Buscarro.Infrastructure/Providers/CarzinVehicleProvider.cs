@@ -14,11 +14,16 @@ public sealed class CarzinVehicleProvider : IVehicleProvider
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
     private readonly HttpClient _httpClient;
+    private readonly IVehicleProviderCatalogReadService _catalogReadService;
     private readonly CarzinOptions _options;
 
-    public CarzinVehicleProvider(HttpClient httpClient, IOptions<CarzinOptions> options)
+    public CarzinVehicleProvider(
+        HttpClient httpClient,
+        IOptions<CarzinOptions> options,
+        IVehicleProviderCatalogReadService catalogReadService)
     {
         _httpClient = httpClient;
+        _catalogReadService = catalogReadService;
         _options = options.Value;
 
         if (_httpClient.BaseAddress is null && Uri.TryCreate(_options.BaseUrl, UriKind.Absolute, out var baseUri))
@@ -38,18 +43,19 @@ public sealed class CarzinVehicleProvider : IVehicleProvider
             throw new InvalidOperationException("Token da Carzin nao configurado.");
         }
 
-        var type = criteria.Type <= 0 ? 1 : criteria.Type;
+        const int type = 1;
         var fields = BuildSearchFields(type, criteria);
         var payload = await PostFormAsync<CarzinClassifiedSearchResponseContract>(
             "/api/classified-search",
             fields,
             cancellationToken);
 
+        var vehicles = await Task.WhenAll((payload.Results ?? [])
+            .Select(result => MapToVehicleAsync(result, type, cancellationToken)));
+
         return new VehicleProviderResult
         {
-            Vehicles = payload.Results
-                .Select(MapToVehicle)
-                .ToArray(),
+            Vehicles = vehicles,
             CurrentResults = payload.CurrentResults,
             TotalResults = payload.TotalResults,
             CurrentPage = payload.CurrentPage,
@@ -69,19 +75,19 @@ public sealed class CarzinVehicleProvider : IVehicleProvider
         };
 
         AddIfPresent(fields, "order", criteria.Order);
-        AddIfPresent(fields, "color", criteria.Color);
-        AddIfPresent(fields, "fuel", criteria.Fuel);
-        AddIfPresent(fields, "gear", criteria.Transmission);
+        AddIfPresent(fields, "query", criteria.Query);
         AddIfPresent(fields, "state", criteria.State);
         AddIfPresent(fields, "city", criteria.City);
+        AddIfPresent(fields, "manufacturer", criteria.Manufacturer);
+        AddIfPresent(fields, "model", criteria.Model);
+        AddIfPresent(fields, "version", criteria.Version);
         AddIfPresent(fields, "price_min", criteria.PriceMin);
         AddIfPresent(fields, "price_max", criteria.PriceMax);
         AddIfPresent(fields, "year_min", criteria.YearMin);
         AddIfPresent(fields, "year_max", criteria.YearMax);
-        AddIfPresent(fields, "seller_type", criteria.SellerType);
-        AddIfPresent(fields, "manufacturer", criteria.Brand);
-        AddIfPresent(fields, "model", criteria.Model);
-        AddIfPresent(fields, "version", criteria.Version);
+        AddIfPresent(fields, "color", criteria.Color);
+        AddIfPresent(fields, "gear", criteria.Gear);
+        AddIfPresent(fields, "fuel", criteria.Fuel);
 
         return fields;
     }
@@ -108,28 +114,98 @@ public sealed class CarzinVehicleProvider : IVehicleProvider
             ?? new T();
     }
 
-    private Vehicle MapToVehicle(
-        CarzinClassifiedContract source)
+    private async Task<Vehicle> MapToVehicleAsync(
+        CarzinClassifiedContract source,
+        int vehicleType,
+        CancellationToken cancellationToken)
     {
+        var manufacturerId = source.ManufacturerId.GetValueOrDefault();
+        var modelId = source.ModelId.GetValueOrDefault();
+        var versionId = source.VersionId.GetValueOrDefault();
+
+        var catalogNames = HasCatalogCodes(manufacturerId, modelId, versionId)
+            ? await ResolveCatalogNamesOrFallbackAsync(
+                ProviderName,
+                vehicleType,
+                manufacturerId.ToString(CultureInfo.InvariantCulture),
+                modelId.ToString(CultureInfo.InvariantCulture),
+                versionId.ToString(CultureInfo.InvariantCulture),
+                cancellationToken)
+            : new VehicleProviderCatalogNames(null, null, null);
+
         return new Vehicle
         {
-            ExternalId = source.Id.ToString(CultureInfo.InvariantCulture),
+            ExternalId = source.Id?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
             Provider = ProviderName,
-            Title = source.Title,
-            Brand = source.Manufacturer,
-            Model = source.Model,
-            Version = source.Version,
-            Year = source.YearModel > 0 ? source.YearModel : source.YearManufacture,
-            Mileage = source.Mileage,
-            Fuel = source.Fuel,
-            Transmission = source.Gear,
-            Color = source.Color,
-            Price = source.Price,
-            City = WebUtility.HtmlDecode(source.City),
-            State = source.State,
-            Url = source.Url,
-            ImageUrl = source.Image
+            Title = UseProviderValue(source.Title),
+            Brand = UseCatalogOrProviderValue(catalogNames.ManufacturerName, source.Manufacturer),
+            Model = UseCatalogOrProviderValue(catalogNames.ModelName, source.Model),
+            Version = UseCatalogOrProviderValue(catalogNames.VersionName, source.Version),
+            Year = source.YearModel.GetValueOrDefault() > 0
+                ? source.YearModel.GetValueOrDefault()
+                : source.YearManufacture.GetValueOrDefault(),
+            Mileage = source.Mileage.GetValueOrDefault(),
+            Doors = source.Doors,
+            Armored = ReadBoolean(source.Armored),
+            Fuel = UseProviderValue(source.Fuel),
+            Transmission = UseProviderValue(source.Gear),
+            Color = UseProviderValue(source.Color),
+            Price = source.Price.GetValueOrDefault(),
+            City = UseProviderValue(WebUtility.HtmlDecode(source.City)),
+            State = UseProviderValue(source.State),
+            Url = UseProviderValue(source.Url),
+            ImageUrl = UseProviderValue(source.Image)
         };
+    }
+
+    private static bool HasCatalogCodes(
+        int manufacturerId,
+        int modelId,
+        int versionId)
+    {
+        return manufacturerId > 0 && modelId > 0 && versionId > 0;
+    }
+
+    private async Task<VehicleProviderCatalogNames> ResolveCatalogNamesOrFallbackAsync(
+        string providerName,
+        int vehicleType,
+        string manufacturerCode,
+        string modelCode,
+        string versionCode,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _catalogReadService.ResolveNamesAsync(
+                providerName,
+                vehicleType,
+                manufacturerCode,
+                modelCode,
+                versionCode,
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return new VehicleProviderCatalogNames(null, null, null);
+        }
+    }
+
+    private static string UseCatalogOrProviderValue(string? catalogValue, string? providerValue)
+    {
+        return string.IsNullOrWhiteSpace(catalogValue)
+            ? UseProviderValue(providerValue)
+            : catalogValue.Trim();
+    }
+
+    private static string UseProviderValue(string? providerValue)
+    {
+        return string.IsNullOrWhiteSpace(providerValue)
+            ? string.Empty
+            : providerValue.Trim();
     }
 
     private static void AddIfPresent(
@@ -142,6 +218,20 @@ public sealed class CarzinVehicleProvider : IVehicleProvider
             fields[name] = value.Trim();
         }
     }
+
+    private static bool? ReadBoolean(JsonElement value)
+    {
+        return value.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Number when value.TryGetInt32(out var number) => number == 1,
+            JsonValueKind.String when bool.TryParse(value.GetString(), out var boolean) => boolean,
+            JsonValueKind.String when int.TryParse(value.GetString(), out var number) => number == 1,
+            _ => null
+        };
+    }
+
 
     private static void AddIfPresent(
         IDictionary<string, string> fields,

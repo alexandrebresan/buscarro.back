@@ -14,15 +14,18 @@ public sealed class AddFavoriteVehicleHandler
     private readonly ICurrentUserService _currentUser;
     private readonly IFavoriteVehicleRepository _favorites;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IVehicleCatalogReadService _vehicleCatalogReadService;
 
     public AddFavoriteVehicleHandler(
         ICurrentUserService currentUser,
         IFavoriteVehicleRepository favorites,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IVehicleCatalogReadService vehicleCatalogReadService)
     {
         _currentUser = currentUser;
         _favorites = favorites;
         _unitOfWork = unitOfWork;
+        _vehicleCatalogReadService = vehicleCatalogReadService;
     }
 
     public async Task<FavoriteVehicleResponse> Handle(
@@ -38,25 +41,37 @@ public sealed class AddFavoriteVehicleHandler
             throw new ConflictException("Este veiculo ja esta nos favoritos do usuario.");
         }
 
+        var vehicle = await _vehicleCatalogReadService.FindVehicleByProviderAndExternalIdAsync(
+            provider,
+            externalId,
+            cancellationToken);
+
+        if (vehicle is null)
+        {
+            throw new NotFoundException("Anuncio nao encontrado para favoritar.");
+        }
+
         var favorite = new FavoriteVehicle
         {
             UserId = userId,
-            Provider = provider,
-            ExternalId = externalId,
-            Title = NormalizeOptional(request.Title),
-            Brand = NormalizeOptional(request.Brand),
-            Model = NormalizeOptional(request.Model),
-            Version = NormalizeOptional(request.Version),
-            Year = request.Year,
-            Mileage = request.Mileage,
-            Fuel = NormalizeOptional(request.Fuel),
-            Transmission = NormalizeOptional(request.Transmission),
-            Color = NormalizeOptional(request.Color),
-            Price = request.Price,
-            City = NormalizeOptional(request.City),
-            State = NormalizeOptional(request.State),
-            Url = NormalizeOptional(request.Url),
-            ImageUrl = NormalizeOptional(request.ImageUrl)
+            Provider = NormalizeRequired(vehicle.Provider, "Provider"),
+            ExternalId = NormalizeRequired(vehicle.ExternalId, "ExternalId"),
+            Title = NormalizeOptional(vehicle.Title),
+            Brand = NormalizeOptional(vehicle.Brand),
+            Model = NormalizeOptional(vehicle.Model),
+            Version = NormalizeOptional(vehicle.Version),
+            Year = vehicle.Year,
+            Mileage = vehicle.Mileage,
+            Doors = vehicle.Doors,
+            Armored = vehicle.Armored,
+            Fuel = NormalizeOptional(vehicle.Fuel),
+            Transmission = NormalizeOptional(vehicle.Transmission),
+            Color = NormalizeOptional(vehicle.Color),
+            Price = vehicle.Price,
+            City = NormalizeOptional(vehicle.City),
+            State = NormalizeOptional(vehicle.State),
+            Url = NormalizeOptional(vehicle.Url),
+            ImageUrl = NormalizeOptional(vehicle.ImageUrl)
         };
 
         await _favorites.AddAsync(favorite, cancellationToken);
@@ -78,6 +93,8 @@ public sealed class AddFavoriteVehicleHandler
             Version = favorite.Version,
             Year = favorite.Year,
             Mileage = favorite.Mileage,
+            Doors = favorite.Doors,
+            Armored = favorite.Armored,
             Fuel = favorite.Fuel,
             Transmission = favorite.Transmission,
             Color = favorite.Color,

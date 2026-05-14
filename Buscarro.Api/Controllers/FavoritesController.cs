@@ -2,13 +2,11 @@ using Buscarro.Application.Commands;
 using Buscarro.Application.Exceptions;
 using Buscarro.Application.Queries;
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Buscarro.Api.Controllers;
 
 [ApiController]
-[Authorize]
 [Route("api/[controller]")]
 public class FavoritesController : ControllerBase
 {
@@ -22,8 +20,15 @@ public class FavoritesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(new ListFavoriteVehiclesQuery(), cancellationToken);
-        return Ok(result);
+        try
+        {
+            var result = await _mediator.Send(new ListFavoriteVehiclesQuery(), cancellationToken);
+            return Ok(result);
+        }
+        catch (CurrentUserRequiredException ex)
+        {
+            return Unauthorized(ex.Message);
+        }
     }
 
     [HttpPost]
@@ -48,6 +53,10 @@ public class FavoritesController : ControllerBase
         catch (ConflictException ex)
         {
             return Conflict(ex.Message);
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(ex.Message);
         }
         catch (CurrentUserRequiredException ex)
         {

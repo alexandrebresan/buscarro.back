@@ -24,18 +24,4 @@ public class VehiclesController : ControllerBase
         var result = await _mediator.Send(new FindAllVehiclesQuery(criteria), cancellationToken);
         return Ok(result);
     }
-
-    [HttpGet("years")]
-    public async Task<IActionResult> GetYears(CancellationToken cancellationToken)
-    {
-        var result = await _mediator.Send(new GetVehicleYearsQuery(), cancellationToken);
-        return Ok(result);
-    }
-
-    [HttpGet("brands")]
-    public async Task<IActionResult> GetBrands(CancellationToken cancellationToken)
-    {
-        var result = await _mediator.Send(new GetVehicleBrandsQuery(), cancellationToken);
-        return Ok(result);
-    }
 }

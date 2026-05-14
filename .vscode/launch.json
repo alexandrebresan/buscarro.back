@@ -1,11 +1,33 @@
 {
-    // Use o IntelliSense para saber mais sobre os atributos possíveis.
-    // Focalizar para exibir as descrições dos atributos existentes.
-    // Para obter mais informações, acesse: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-    
-        
-
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Buscarro.Api (http)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build Buscarro.Api",
+      "program": "${workspaceFolder}/Buscarro.Api/bin/Debug/net9.0/Buscarro.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/Buscarro.Api",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5294"
+      }
+    },
+    {
+      "name": "Buscarro.Api (https)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build Buscarro.Api",
+      "program": "${workspaceFolder}/Buscarro.Api/bin/Debug/net9.0/Buscarro.Api.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/Buscarro.Api",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "https://localhost:7175;http://localhost:5294"
+      }
+    }
+  ]
 }

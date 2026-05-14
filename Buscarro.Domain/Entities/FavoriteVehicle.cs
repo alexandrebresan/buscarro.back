@@ -13,6 +13,8 @@ public class FavoriteVehicle
     public string Version { get; set; } = string.Empty;
     public int Year { get; set; }
     public int Mileage { get; set; }
+    public int? Doors { get; set; }
+    public bool? Armored { get; set; }
     public string Fuel { get; set; } = string.Empty;
     public string Transmission { get; set; } = string.Empty;
     public string Color { get; set; } = string.Empty;
