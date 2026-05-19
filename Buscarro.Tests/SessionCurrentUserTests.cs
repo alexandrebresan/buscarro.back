@@ -6,6 +6,7 @@ using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
+using System.Security.Claims;
 using System.Text;
 
 namespace Buscarro.Tests;
@@ -55,6 +56,25 @@ public sealed class SessionCurrentUserTests
             HttpContext = new DefaultHttpContext
             {
                 Session = session
+            }
+        };
+
+        var currentUser = new CurrentUserService(accessor);
+
+        Assert.Equal(userId, currentUser.UserId);
+    }
+
+    [Fact]
+    public void CurrentUserService_reads_user_id_from_authenticated_claim()
+    {
+        var userId = Guid.NewGuid();
+        var accessor = new HttpContextAccessor
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                    [new Claim(ClaimTypes.NameIdentifier, userId.ToString())],
+                    "Bearer"))
             }
         };
 

@@ -2,12 +2,14 @@ using Buscarro.Application.Commands;
 using Buscarro.Application.Exceptions;
 using Buscarro.Application.Queries;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Buscarro.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class FavoritesController : ControllerBase
 {
     private readonly IMediator _mediator;

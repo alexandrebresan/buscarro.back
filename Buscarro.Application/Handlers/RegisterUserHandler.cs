@@ -13,15 +13,18 @@ public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, A
     private readonly IUserRepository _users;
     private readonly IPasswordHasherService _passwordHasher;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IJwtTokenService _jwtTokenService;
 
     public RegisterUserHandler(
         IUserRepository users,
         IPasswordHasherService passwordHasher,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IJwtTokenService jwtTokenService)
     {
         _users = users;
         _passwordHasher = passwordHasher;
         _unitOfWork = unitOfWork;
+        _jwtTokenService = jwtTokenService;
     }
 
     public async Task<AuthResponse> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
@@ -45,13 +48,16 @@ public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, A
         await _users.AddAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ToAuthResponse(user);
+        return ToAuthResponse(user, _jwtTokenService.CreateToken(user));
     }
 
-    private static AuthResponse ToAuthResponse(User user)
+    private static AuthResponse ToAuthResponse(User user, JwtTokenResponse token)
     {
         return new AuthResponse
         {
+            Token = token.Token,
+            TokenType = token.TokenType,
+            ExpiresAtUtc = token.ExpiresAtUtc,
             User = new UserResponse
             {
                 Id = user.Id,

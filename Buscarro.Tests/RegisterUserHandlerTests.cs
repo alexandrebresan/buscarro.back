@@ -10,14 +10,15 @@ namespace Buscarro.Tests;
 public sealed class RegisterUserHandlerTests
 {
     [Fact]
-    public async Task Handle_inserts_user_with_hashed_password_and_returns_user_without_token()
+    public async Task Handle_inserts_user_with_hashed_password_and_returns_user_with_token()
     {
         var users = new FakeUserRepository();
         var passwordHasher = new FakePasswordHasherService();
         var handler = new RegisterUserHandler(
             users,
             passwordHasher,
-            new FakeUnitOfWork());
+            new FakeUnitOfWork(),
+            new FakeJwtTokenService());
 
         var response = await handler.Handle(
             new RegisterUserCommand("Alex", "ALEX@EXAMPLE.COM", "secret"),
@@ -29,6 +30,9 @@ public sealed class RegisterUserHandlerTests
         Assert.Equal(users.Added.Id, response.User.Id);
         Assert.Equal("Alex", response.User.Name);
         Assert.Equal("alex@example.com", response.User.Email);
+        Assert.Equal("jwt-token", response.Token);
+        Assert.Equal("Bearer", response.TokenType);
+        Assert.Equal(FakeJwtTokenService.ExpiresAtUtc, response.ExpiresAtUtc);
     }
 
     private sealed class FakeUserRepository : IUserRepository
@@ -75,6 +79,16 @@ public sealed class RegisterUserHandlerTests
         public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
         {
             return Task.FromResult(1);
+        }
+    }
+
+    private sealed class FakeJwtTokenService : IJwtTokenService
+    {
+        public static readonly DateTime ExpiresAtUtc = new(2026, 5, 18, 12, 0, 0, DateTimeKind.Utc);
+
+        public JwtTokenResponse CreateToken(User user)
+        {
+            return new JwtTokenResponse("jwt-token", "Bearer", ExpiresAtUtc);
         }
     }
 }

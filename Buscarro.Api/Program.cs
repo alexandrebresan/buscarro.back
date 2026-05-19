@@ -8,8 +8,11 @@ using Buscarro.Infrastructure.Providers;
 using Buscarro.Infrastructure.Repositories;
 using Buscarro.Infrastructure.Services;
 using Buscarro.Infrastructure.UnitOfWork;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +37,29 @@ builder.Services.AddSwaggerGen(options =>
         Title = "Buscarro API",
         Version = "v1"
     });
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Informe o token JWT no formato Bearer."
+    });
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            []
+        }
+    });
 });
 
 builder.Services.AddMediatR(cfg =>
@@ -50,9 +76,29 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IFavoriteVehicleRepository, FavoriteVehicleRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IPasswordHasherService, PasswordHasherService>();
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddSingleton<IVehicleProviderCatalogReadService, VehicleProviderCatalogReadService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.Configure<JwtOptions>(
+    builder.Configuration.GetSection("Jwt"));
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>() ?? new JwtOptions();
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtOptions.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = jwtOptions.CreateSecurityKey(),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+    });
 builder.Services.AddAuthorization();
 
 builder.Services.AddHttpClient<CarzinVehicleProvider>((serviceProvider, client) =>
@@ -105,6 +151,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseSession();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

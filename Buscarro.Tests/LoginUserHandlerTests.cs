@@ -1,4 +1,5 @@
 using Buscarro.Application.Commands;
+using Buscarro.Application.DTOs;
 using Buscarro.Application.Exceptions;
 using Buscarro.Application.Handlers;
 using Buscarro.Application.Interfaces;
@@ -21,7 +22,8 @@ public sealed class LoginUserHandlerTests
         };
         var handler = new LoginUserHandler(
             new FakeUserRepository(user),
-            new FakePasswordHasherService());
+            new FakePasswordHasherService(),
+            new FakeJwtTokenService());
 
         var response = await handler.Handle(
             new LoginUserCommand("ALEX@EXAMPLE.COM", "secret"),
@@ -30,6 +32,9 @@ public sealed class LoginUserHandlerTests
         Assert.Equal(user.Id, response.User.Id);
         Assert.Equal("Alex", response.User.Name);
         Assert.Equal("alex@example.com", response.User.Email);
+        Assert.Equal("jwt-token", response.Token);
+        Assert.Equal("Bearer", response.TokenType);
+        Assert.Equal(FakeJwtTokenService.ExpiresAtUtc, response.ExpiresAtUtc);
     }
 
     [Fact]
@@ -42,7 +47,8 @@ public sealed class LoginUserHandlerTests
         };
         var handler = new LoginUserHandler(
             new FakeUserRepository(user),
-            new FakePasswordHasherService());
+            new FakePasswordHasherService(),
+            new FakeJwtTokenService());
 
         await Assert.ThrowsAsync<AuthenticationFailedException>(() =>
             handler.Handle(new LoginUserCommand("alex@example.com", "wrong"), CancellationToken.None));
@@ -88,6 +94,16 @@ public sealed class LoginUserHandlerTests
         public bool VerifyPassword(User user, string password)
         {
             return user.PasswordHash == $"hashed-{password}";
+        }
+    }
+
+    private sealed class FakeJwtTokenService : IJwtTokenService
+    {
+        public static readonly DateTime ExpiresAtUtc = new(2026, 5, 18, 12, 0, 0, DateTimeKind.Utc);
+
+        public JwtTokenResponse CreateToken(User user)
+        {
+            return new JwtTokenResponse("jwt-token", "Bearer", ExpiresAtUtc);
         }
     }
 }

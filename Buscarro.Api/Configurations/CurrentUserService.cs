@@ -19,10 +19,27 @@ public sealed class CurrentUserService : ICurrentUserService
         get
         {
             var httpContext = _httpContextAccessor.HttpContext;
-            var value = httpContext?.Session.GetString(UserIdSessionKey)
-                ?? httpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var value = httpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? GetSessionUserId(httpContext);
 
             return Guid.TryParse(value, out var userId) ? userId : null;
+        }
+    }
+
+    private static string? GetSessionUserId(HttpContext? httpContext)
+    {
+        if (httpContext is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return httpContext.Session.GetString(UserIdSessionKey);
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
         }
     }
 }
