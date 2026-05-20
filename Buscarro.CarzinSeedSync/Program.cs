@@ -6,7 +6,10 @@ using Microsoft.Extensions.Options;
 using System.Text.Json;
 
 var configuration = SeedSyncConfiguration.Load(AppContext.BaseDirectory);
-var connectionString = configuration.Require("ConnectionStrings:BuscarroDb");
+var connectionString = PostgresConnectionString.Normalize(
+    configuration.Get("DATABASE_URL")
+        ?? configuration.Get("ConnectionStrings:BuscarroDb")
+        ?? string.Empty);
 var carzinOptions = new CarzinOptions
 {
     BaseUrl = configuration.Require("Carzin:BaseUrl"),
@@ -16,11 +19,28 @@ var catalogOptions = new CarzinCatalogOptions
 {
     ManufacturersPath = configuration.Require("CarzinCatalog:ManufacturersPath"),
     ModelsPath = configuration.Require("CarzinCatalog:ModelsPath"),
-    VersionsPath = configuration.Require("CarzinCatalog:VersionsPath")
+    VersionsPath = configuration.Require("CarzinCatalog:VersionsPath"),
+    RequestDelayMilliseconds = configuration.GetInt(
+        "CarzinCatalog:RequestDelayMilliseconds",
+        new CarzinCatalogOptions().RequestDelayMilliseconds),
+    MaxRetryAttempts = configuration.GetInt(
+        "CarzinCatalog:MaxRetryAttempts",
+        new CarzinCatalogOptions().MaxRetryAttempts),
+    RetryBaseDelaySeconds = configuration.GetInt(
+        "CarzinCatalog:RetryBaseDelaySeconds",
+        new CarzinCatalogOptions().RetryBaseDelaySeconds),
+    RetryMaxDelaySeconds = configuration.GetInt(
+        "CarzinCatalog:RetryMaxDelaySeconds",
+        new CarzinCatalogOptions().RetryMaxDelaySeconds)
 };
 
 var dbContextOptions = new DbContextOptionsBuilder<BuscarroDbContext>()
-    .UseSqlServer(connectionString)
+    .UseNpgsql(
+        connectionString,
+        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 8,
+            maxRetryDelay: TimeSpan.FromSeconds(60),
+            errorCodesToAdd: null))
     .Options;
 
 await using var dbContext = new BuscarroDbContext(dbContextOptions);
@@ -63,12 +83,29 @@ internal sealed class SeedSyncConfiguration
 
     public string Require(string key)
     {
-        if (!_values.TryGetValue(key, out var value) || string.IsNullOrWhiteSpace(value))
+        var value = Get(key);
+        if (string.IsNullOrWhiteSpace(value))
         {
             throw new InvalidOperationException($"{key} nao configurado.");
         }
 
         return value.Trim();
+    }
+
+    public string? Get(string key)
+    {
+        return _values.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value)
+            ? value.Trim()
+            : null;
+    }
+
+    public int GetInt(string key, int defaultValue)
+    {
+        var value = Get(key);
+
+        return int.TryParse(value, out var parsedValue)
+            ? parsedValue
+            : defaultValue;
     }
 
     private static void LoadJson(string path, IDictionary<string, string> values)
@@ -119,11 +156,16 @@ internal sealed class SeedSyncConfiguration
         foreach (var key in new[]
         {
             "ConnectionStrings__BuscarroDb",
+            "DATABASE_URL",
             "Carzin__BaseUrl",
             "Carzin__Token",
             "CarzinCatalog__ManufacturersPath",
             "CarzinCatalog__ModelsPath",
-            "CarzinCatalog__VersionsPath"
+            "CarzinCatalog__VersionsPath",
+            "CarzinCatalog__RequestDelayMilliseconds",
+            "CarzinCatalog__MaxRetryAttempts",
+            "CarzinCatalog__RetryBaseDelaySeconds",
+            "CarzinCatalog__RetryMaxDelaySeconds"
         })
         {
             var value = Environment.GetEnvironmentVariable(key);

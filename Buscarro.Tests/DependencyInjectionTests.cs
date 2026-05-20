@@ -12,13 +12,13 @@ public sealed class DependencyInjectionTests
     public void Catalog_read_service_registration_can_be_validated_with_scopes()
     {
         var services = new ServiceCollection();
-        const string connectionString = "Server=(localdb)\\mssqllocaldb;Database=BuscarroTestDb;Trusted_Connection=True;";
+        const string connectionString = "Host=localhost;Database=BuscarroTestDb;Username=postgres;Password=postgres";
 
         services.AddDbContext<BuscarroDbContext>(options =>
-            options.UseSqlServer(connectionString),
+            options.UseNpgsql(connectionString),
             optionsLifetime: ServiceLifetime.Singleton);
         services.AddDbContextFactory<BuscarroDbContext>(options =>
-            options.UseSqlServer(connectionString));
+            options.UseNpgsql(connectionString));
         services.AddMemoryCache();
         services.AddSingleton<IVehicleProviderCatalogReadService, VehicleProviderCatalogReadService>();
 

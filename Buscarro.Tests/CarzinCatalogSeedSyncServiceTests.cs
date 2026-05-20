@@ -2,6 +2,7 @@ using Buscarro.Domain.Entities;
 using Buscarro.Infrastructure.Providers;
 using Microsoft.Extensions.Options;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 
 namespace Buscarro.Tests;
@@ -71,6 +72,43 @@ public sealed class CarzinCatalogSeedSyncServiceTests
     }
 
     [Fact]
+    public async Task SyncAsync_saves_after_each_completed_manufacturer()
+    {
+        var store = new FakeCatalogStore(new DateTime(2026, 5, 18, 12, 0, 0, DateTimeKind.Utc));
+        var service = CreateService(store, new CatalogResponseHandler(new Dictionary<string, string>
+        {
+            ["/manufacturers"] = """{"results":[{"id":10,"name":"Honda"},{"id":11,"name":"Toyota"}]}""",
+            ["/models"] = """{"results":[]}""",
+            ["/versions"] = """{"results":[]}"""
+        }));
+
+        await service.SyncAsync(CancellationToken.None);
+
+        Assert.Equal(2, store.SaveChangesCalls);
+    }
+
+    [Fact]
+    public async Task SyncAsync_retries_catalog_request_when_provider_returns_transient_error()
+    {
+        var store = new FakeCatalogStore(new DateTime(2026, 5, 18, 12, 0, 0, DateTimeKind.Utc));
+        var handler = new TransientFailureThenSuccessHandler(
+            "/manufacturers",
+            HttpStatusCode.ServiceUnavailable,
+            """{"results":[{"id":10,"name":"Honda"}]}""",
+            new Dictionary<string, string>
+            {
+                ["/models"] = """{"results":[]}""",
+                ["/versions"] = """{"results":[]}"""
+            });
+        var service = CreateService(store, handler);
+
+        var result = await service.SyncAsync(CancellationToken.None);
+
+        Assert.Equal(1, result.Manufacturers);
+        Assert.Equal(2, handler.RequestCountByPath["/manufacturers"]);
+    }
+
+    [Fact]
     public async Task SyncAsync_fails_when_catalog_paths_are_not_configured()
     {
         var service = new CarzinCatalogSeedSyncService(
@@ -106,7 +144,11 @@ public sealed class CarzinCatalogSeedSyncServiceTests
             {
                 ManufacturersPath = "/manufacturers",
                 ModelsPath = "/models",
-                VersionsPath = "/versions"
+                VersionsPath = "/versions",
+                RequestDelayMilliseconds = 0,
+                MaxRetryAttempts = 5,
+                RetryBaseDelaySeconds = 1,
+                RetryMaxDelaySeconds = 30
             }),
             store,
             new FixedTimeProvider(store.UtcNow));
@@ -160,6 +202,52 @@ public sealed class CarzinCatalogSeedSyncServiceTests
                     Encoding.UTF8,
                     "application/json")
             };
+        }
+    }
+
+    private sealed class TransientFailureThenSuccessHandler : HttpMessageHandler
+    {
+        private readonly string _transientFailurePath;
+        private readonly HttpStatusCode _transientStatusCode;
+        private readonly string _successBody;
+        private readonly IReadOnlyDictionary<string, string> _responsesByPath;
+
+        public TransientFailureThenSuccessHandler(
+            string transientFailurePath,
+            HttpStatusCode transientStatusCode,
+            string successBody,
+            IReadOnlyDictionary<string, string> responsesByPath)
+        {
+            _transientFailurePath = transientFailurePath;
+            _transientStatusCode = transientStatusCode;
+            _successBody = successBody;
+            _responsesByPath = responsesByPath;
+        }
+
+        public Dictionary<string, int> RequestCountByPath { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri!.AbsolutePath;
+            RequestCountByPath[path] = RequestCountByPath.GetValueOrDefault(path) + 1;
+
+            if (path == _transientFailurePath && RequestCountByPath[path] == 1)
+            {
+                var transientResponse = new HttpResponseMessage(_transientStatusCode);
+                transientResponse.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.Zero);
+                return Task.FromResult(transientResponse);
+            }
+
+            var body = path == _transientFailurePath
+                ? _successBody
+                : _responsesByPath[path];
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json")
+            });
         }
     }
 

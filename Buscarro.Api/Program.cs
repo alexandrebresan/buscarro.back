@@ -16,6 +16,12 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
@@ -65,13 +71,26 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(FindAllVehiclesQuery).Assembly));
 
-var buscarroConnectionString = builder.Configuration.GetConnectionString("BuscarroDb");
+var buscarroConnectionString = PostgresConnectionString.Normalize(
+    builder.Configuration["DATABASE_URL"]
+        ?? builder.Configuration.GetConnectionString("BuscarroDb")
+        ?? string.Empty);
 
 builder.Services.AddDbContext<BuscarroDbContext>(options =>
-    options.UseSqlServer(buscarroConnectionString),
+    options.UseNpgsql(
+        buscarroConnectionString,
+        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorCodesToAdd: null)),
     optionsLifetime: ServiceLifetime.Singleton);
 builder.Services.AddDbContextFactory<BuscarroDbContext>(options =>
-    options.UseSqlServer(buscarroConnectionString));
+    options.UseNpgsql(
+        buscarroConnectionString,
+        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorCodesToAdd: null)));
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IFavoriteVehicleRepository, FavoriteVehicleRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -153,6 +172,7 @@ if (app.Environment.IsDevelopment())
 app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
 
 app.Run();

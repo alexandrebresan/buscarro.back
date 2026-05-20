@@ -1,6 +1,7 @@
 using Buscarro.Infrastructure.Contracts;
 using Microsoft.Extensions.Options;
 using System.Globalization;
+using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 
@@ -108,9 +109,10 @@ public sealed class CarzinCatalogSeedSyncService
                     versionsCount++;
                 }
             }
+
+            await _store.SaveChangesAsync(cancellationToken);
         }
 
-        await _store.SaveChangesAsync(cancellationToken);
         return new CarzinCatalogSeedSyncResult(manufacturersCount, modelsCount, versionsCount);
     }
 
@@ -119,7 +121,41 @@ public sealed class CarzinCatalogSeedSyncService
         IReadOnlyDictionary<string, string> fields,
         CancellationToken cancellationToken)
     {
-        using var content = new MultipartFormDataContent();
+        var maxAttempts = Math.Max(1, _catalogOptions.MaxRetryAttempts);
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            using var content = CreateCatalogRequestContent(fields);
+            using var response = await _httpClient.PostAsync(path, content, cancellationToken);
+
+            if (!IsTransientStatusCode(response.StatusCode))
+            {
+                response.EnsureSuccessStatusCode();
+
+                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+                var items = ReadCatalogItems(document.RootElement);
+                await WaitAfterSuccessfulCatalogRequestAsync(cancellationToken);
+                return items;
+            }
+
+            if (attempt == maxAttempts)
+            {
+                throw new HttpRequestException(
+                    $"Carzin catalog request failed with transient status {(int)response.StatusCode} after {maxAttempts} attempts. Path: {path}. Fields: {DescribeFields(fields)}.",
+                    null,
+                    response.StatusCode);
+            }
+
+            await Task.Delay(GetRetryDelay(response, attempt), cancellationToken);
+        }
+
+        throw new InvalidOperationException("Fluxo de retry do catalogo Carzin encerrado inesperadamente.");
+    }
+
+    private MultipartFormDataContent CreateCatalogRequestContent(IReadOnlyDictionary<string, string> fields)
+    {
+        var content = new MultipartFormDataContent();
         content.Add(new StringContent(_carzinOptions.Token), "token");
 
         foreach (var field in fields)
@@ -127,12 +163,52 @@ public sealed class CarzinCatalogSeedSyncService
             content.Add(new StringContent(field.Value), field.Key);
         }
 
-        using var response = await _httpClient.PostAsync(path, content, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        return content;
+    }
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-        return ReadCatalogItems(document.RootElement);
+    private static bool IsTransientStatusCode(HttpStatusCode statusCode)
+    {
+        return statusCode is HttpStatusCode.RequestTimeout
+            or HttpStatusCode.TooManyRequests
+            or HttpStatusCode.BadGateway
+            or HttpStatusCode.ServiceUnavailable
+            or HttpStatusCode.GatewayTimeout;
+    }
+
+    private async Task WaitAfterSuccessfulCatalogRequestAsync(CancellationToken cancellationToken)
+    {
+        if (_catalogOptions.RequestDelayMilliseconds <= 0)
+        {
+            return;
+        }
+
+        await Task.Delay(
+            TimeSpan.FromMilliseconds(_catalogOptions.RequestDelayMilliseconds),
+            cancellationToken);
+    }
+
+    private TimeSpan GetRetryDelay(HttpResponseMessage response, int attempt)
+    {
+        if (response.Headers.RetryAfter?.Delta is { } delta)
+        {
+            return delta < TimeSpan.Zero ? TimeSpan.Zero : delta;
+        }
+
+        if (response.Headers.RetryAfter?.Date is { } retryDate)
+        {
+            var delay = retryDate - _timeProvider.GetUtcNow();
+            return delay < TimeSpan.Zero ? TimeSpan.Zero : delay;
+        }
+
+        var baseDelaySeconds = Math.Max(1, _catalogOptions.RetryBaseDelaySeconds);
+        var maxDelaySeconds = Math.Max(baseDelaySeconds, _catalogOptions.RetryMaxDelaySeconds);
+        var exponentialDelay = baseDelaySeconds * Math.Pow(2, attempt - 1);
+        return TimeSpan.FromSeconds(Math.Min(maxDelaySeconds, exponentialDelay));
+    }
+
+    private static string DescribeFields(IReadOnlyDictionary<string, string> fields)
+    {
+        return string.Join(", ", fields.Select(field => $"{field.Key}={field.Value}"));
     }
 
     private void ValidateConfiguration()
