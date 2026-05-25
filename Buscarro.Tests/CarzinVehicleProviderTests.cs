@@ -364,6 +364,26 @@ public sealed class CarzinVehicleProviderTests
 
             return Task.FromResult(_names);
         }
+
+        public Task<IReadOnlyCollection<ManufacturerCatalogItemResponse>> ListManufacturersAsync(
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyCollection<ManufacturerCatalogItemResponse>>([]);
+        }
+
+        public Task<IReadOnlyCollection<ModelCatalogItemResponse>> ListModelsAsync(
+            Guid manufacturerId,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyCollection<ModelCatalogItemResponse>>([]);
+        }
+
+        public Task<IReadOnlyCollection<VersionCatalogItemResponse>> ListVersionsAsync(
+            Guid modelId,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyCollection<VersionCatalogItemResponse>>([]);
+        }
     }
 
     private sealed class ThrowingCatalogReadService : IVehicleProviderCatalogReadService
@@ -377,6 +397,26 @@ public sealed class CarzinVehicleProviderTests
             CancellationToken cancellationToken)
         {
             throw new InvalidOperationException("Catalogo indisponivel.");
+        }
+
+        public Task<IReadOnlyCollection<ManufacturerCatalogItemResponse>> ListManufacturersAsync(
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyCollection<ManufacturerCatalogItemResponse>>([]);
+        }
+
+        public Task<IReadOnlyCollection<ModelCatalogItemResponse>> ListModelsAsync(
+            Guid manufacturerId,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyCollection<ModelCatalogItemResponse>>([]);
+        }
+
+        public Task<IReadOnlyCollection<VersionCatalogItemResponse>> ListVersionsAsync(
+            Guid modelId,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyCollection<VersionCatalogItemResponse>>([]);
         }
     }
 

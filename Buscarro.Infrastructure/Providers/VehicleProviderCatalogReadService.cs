@@ -10,6 +10,8 @@ namespace Buscarro.Infrastructure.Providers;
 public sealed class VehicleProviderCatalogReadService : IVehicleProviderCatalogReadService
 {
     private const string CacheKeyPrefix = "vehicle-provider-catalog";
+    private const string DefaultProviderName = "Carzin";
+    private const int DefaultVehicleType = 1;
 
     private readonly IDbContextFactory<BuscarroDbContext> _dbContextFactory;
     private readonly IMemoryCache _cache;
@@ -94,6 +96,63 @@ public sealed class VehicleProviderCatalogReadService : IVehicleProviderCatalogR
         }
 
         return new VehicleProviderCatalogNames(manufacturerName, modelName, versionName);
+    }
+
+    public async Task<IReadOnlyCollection<ManufacturerCatalogItemResponse>> ListManufacturersAsync(
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.VehicleProviderManufacturers
+            .AsNoTracking()
+            .Where(manufacturer =>
+                manufacturer.ProviderName == DefaultProviderName &&
+                manufacturer.VehicleType == DefaultVehicleType)
+            .OrderBy(manufacturer => manufacturer.Name)
+            .Select(manufacturer => new ManufacturerCatalogItemResponse(
+                manufacturer.ProviderCode,
+                manufacturer.Name,
+                manufacturer.Id))
+            .ToArrayAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<ModelCatalogItemResponse>> ListModelsAsync(
+        Guid manufacturerId,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.VehicleProviderModels
+            .AsNoTracking()
+            .Where(model =>
+                model.ProviderName == DefaultProviderName &&
+                model.VehicleType == DefaultVehicleType &&
+                model.ManufacturerId == manufacturerId)
+            .OrderBy(model => model.Name)
+            .Select(model => new ModelCatalogItemResponse(
+                model.ProviderCode,
+                model.Name,
+                model.Id))
+            .ToArrayAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<VersionCatalogItemResponse>> ListVersionsAsync(
+        Guid modelId,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await dbContext.VehicleProviderVersions
+            .AsNoTracking()
+            .Where(version =>
+                version.ProviderName == DefaultProviderName &&
+                version.VehicleType == DefaultVehicleType &&
+                version.ModelId == modelId)
+            .OrderBy(version => version.Name)
+            .Select(version => new VersionCatalogItemResponse(
+                version.ProviderCode,
+                version.Name))
+            .ToArrayAsync(cancellationToken);
     }
 
     private bool TryGetCachedName(string cacheKey, out string? name)
