@@ -55,9 +55,7 @@ public sealed class FindAllVehiclesHandler
                     UsedStaleCache = provider.UsedStaleCache,
                     Error = provider.Error,
                     CurrentResults = provider.CurrentResults,
-                    TotalResults = provider.TotalResults,
-                    CurrentPage = provider.CurrentPage,
-                    TotalPages = provider.TotalPages
+                    CurrentPage = provider.CurrentPage
                 })
                 .ToArray()
         };
