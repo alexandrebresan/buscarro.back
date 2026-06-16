@@ -20,19 +20,17 @@ public sealed class GetVehicleDetailsHandler
         GetVehicleDetailsQuery request,
         CancellationToken cancellationToken)
     {
-        var externalId = NormalizeRequired(request.ExternalId, "ExternalId");
-        var details = await _vehicleDetailsReadService.GetVehicleDetailsAsync(externalId, cancellationToken);
+        ValidateExternalId(request.ExternalId);
+        var details = await _vehicleDetailsReadService.GetVehicleDetailsAsync(request.ExternalId, cancellationToken);
 
         return details ?? throw new NotFoundException("Detalhes do anuncio nao encontrados.");
     }
 
-    private static string NormalizeRequired(string? value, string fieldName)
+    private static void ValidateExternalId(int externalId)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (externalId <= 0)
         {
-            throw new ValidationException($"{fieldName} e obrigatorio.");
+            throw new ValidationException("ExternalId deve ser maior que zero.");
         }
-
-        return value.Trim();
     }
 }

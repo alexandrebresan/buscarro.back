@@ -1,4 +1,5 @@
 using Buscarro.Application.DTOs;
+using Buscarro.Application.Exceptions;
 using Buscarro.Application.Interfaces;
 using Buscarro.Domain.Entities;
 using Buscarro.Infrastructure.Contracts;
@@ -64,7 +65,7 @@ public sealed class CarzinVehicleProvider : IVehicleProvider, IVehicleDetailsRea
     }
 
     public async Task<VehicleDetailsResponse?> GetVehicleDetailsAsync(
-        string externalId,
+        int externalId,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_options.Token))
@@ -75,16 +76,17 @@ public sealed class CarzinVehicleProvider : IVehicleProvider, IVehicleDetailsRea
         var fields = new Dictionary<string, string>
         {
             ["type"] = "1",
-            ["classified"] = externalId.Trim()
+            ["classified"] = externalId.ToString(CultureInfo.InvariantCulture)
         };
-        var payload = await PostFormAsync<CarzinClassifiedDetailsResponseContract>(
+        var payload = await PostFormAsync<JsonElement>(
             "/api/classified-details",
             fields,
             cancellationToken);
+        var details = ReadVehicleDetails(payload);
 
-        return payload.Classified is null
+        return details is null
             ? null
-            : MapToVehicleDetails(payload.Classified);
+            : MapToVehicleDetails(details);
     }
 
     private Dictionary<string, string> BuildSearchFields(
@@ -286,6 +288,67 @@ public sealed class CarzinVehicleProvider : IVehicleProvider, IVehicleDetailsRea
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Select(value => value!.Trim())
             .ToArray();
+    }
+
+    private static CarzinClassifiedDetailsContract? ReadVehicleDetails(JsonElement payload)
+    {
+        if (payload.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+        {
+            return null;
+        }
+
+        if (payload.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        ThrowIfCarzinReturnedError(payload);
+
+        var detailsElement = payload.TryGetProperty("classified", out var classifiedElement)
+            ? classifiedElement
+            : payload;
+
+        if (detailsElement.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+        {
+            return null;
+        }
+
+        if (detailsElement.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<CarzinClassifiedDetailsContract>(
+            detailsElement.GetRawText(),
+            SerializerOptions);
+    }
+
+    private static void ThrowIfCarzinReturnedError(JsonElement payload)
+    {
+        if (!payload.TryGetProperty("error", out var errorElement))
+        {
+            return;
+        }
+
+        var errorCode = ReadInt(errorElement);
+        if (errorCode.GetValueOrDefault() == 0)
+        {
+            return;
+        }
+
+        throw new ProviderAccessDeniedException(
+            "Carzin",
+            "Nao temos permissao na Carzin para acessar os detalhes deste classificado.");
+    }
+
+    private static int? ReadInt(JsonElement value)
+    {
+        return value.ValueKind switch
+        {
+            JsonValueKind.Number when value.TryGetInt32(out var number) => number,
+            JsonValueKind.String when int.TryParse(value.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) => number,
+            _ => null
+        };
     }
 
 

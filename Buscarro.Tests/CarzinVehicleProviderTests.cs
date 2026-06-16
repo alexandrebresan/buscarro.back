@@ -1,4 +1,5 @@
 using Buscarro.Application.DTOs;
+using Buscarro.Application.Exceptions;
 using Buscarro.Application.Interfaces;
 using Buscarro.Infrastructure.Providers;
 using Microsoft.Extensions.Options;
@@ -349,7 +350,7 @@ public sealed class CarzinVehicleProviderTests
             Options.Create(new CarzinOptions { BaseUrl = "https://carzin.test", Token = "token" }),
             new FakeCatalogReadService(new VehicleProviderCatalogNames(null, null, null)));
 
-        await provider.GetVehicleDetailsAsync("29254", CancellationToken.None);
+        await provider.GetVehicleDetailsAsync(29254, CancellationToken.None);
 
         Assert.Equal("/api/classified-details", handler.RequestPath);
         Assert.DoesNotContain("29254", handler.RequestPath);
@@ -367,7 +368,7 @@ public sealed class CarzinVehicleProviderTests
             Options.Create(new CarzinOptions { BaseUrl = "https://carzin.test", Token = "token" }),
             new FakeCatalogReadService(new VehicleProviderCatalogNames(null, null, null)));
 
-        var response = await provider.GetVehicleDetailsAsync("29254", CancellationToken.None);
+        var response = await provider.GetVehicleDetailsAsync(29254, CancellationToken.None);
 
         Assert.NotNull(response);
         Assert.Equal(["IPVA Pago", "Unico Dono"], response.Observations);
@@ -375,6 +376,63 @@ public sealed class CarzinVehicleProviderTests
         var image = Assert.Single(response.Images);
         Assert.Equal("http://url.com/2211-1.jpg", image.ImageUrl);
         Assert.Equal("http://url.com/2211-1_thumb.jpg", image.ThumbUrl);
+    }
+
+    [Fact]
+    public async Task GetVehicleDetailsAsync_maps_details_when_carzin_returns_classified_object_directly()
+    {
+        const string json = """
+        {
+          "type": 1,
+          "id": 371903,
+          "observations": [
+            "IPVA Pago"
+          ],
+          "optionals": [
+            "Air bag"
+          ],
+          "images": [
+            {
+              "image": "http://url.com/371903-1.jpg",
+              "image_thumb": "http://url.com/371903-1_thumb.jpg"
+            }
+          ]
+        }
+        """;
+        var provider = new CarzinVehicleProvider(
+            new HttpClient(new StaticJsonHandler(json)) { BaseAddress = new Uri("https://carzin.test") },
+            Options.Create(new CarzinOptions { BaseUrl = "https://carzin.test", Token = "token" }),
+            new FakeCatalogReadService(new VehicleProviderCatalogNames(null, null, null)));
+
+        var response = await provider.GetVehicleDetailsAsync(371903, CancellationToken.None);
+
+        Assert.NotNull(response);
+        Assert.Equal(["IPVA Pago"], response.Observations);
+        Assert.Equal(["Air bag"], response.Optionals);
+        var image = Assert.Single(response.Images);
+        Assert.Equal("http://url.com/371903-1.jpg", image.ImageUrl);
+        Assert.Equal("http://url.com/371903-1_thumb.jpg", image.ThumbUrl);
+    }
+
+    [Fact]
+    public async Task GetVehicleDetailsAsync_throws_provider_access_denied_when_carzin_returns_permission_error()
+    {
+        const string json = """
+        {
+          "error": 1,
+          "message": "Sem permissao para acessar esta API"
+        }
+        """;
+        var provider = new CarzinVehicleProvider(
+            new HttpClient(new StaticJsonHandler(json)) { BaseAddress = new Uri("https://carzin.test") },
+            Options.Create(new CarzinOptions { BaseUrl = "https://carzin.test", Token = "token" }),
+            new FakeCatalogReadService(new VehicleProviderCatalogNames(null, null, null)));
+
+        var exception = await Assert.ThrowsAsync<ProviderAccessDeniedException>(() =>
+            provider.GetVehicleDetailsAsync(371903, CancellationToken.None));
+
+        Assert.Equal("Carzin", exception.Provider);
+        Assert.Equal("Nao temos permissao na Carzin para acessar os detalhes deste classificado.", exception.Message);
     }
 
     [Fact]
@@ -392,7 +450,7 @@ public sealed class CarzinVehicleProviderTests
             Options.Create(new CarzinOptions { BaseUrl = "https://carzin.test", Token = "token" }),
             new FakeCatalogReadService(new VehicleProviderCatalogNames(null, null, null)));
 
-        var response = await provider.GetVehicleDetailsAsync("29254", CancellationToken.None);
+        var response = await provider.GetVehicleDetailsAsync(29254, CancellationToken.None);
 
         Assert.NotNull(response);
         Assert.Empty(response.Observations);

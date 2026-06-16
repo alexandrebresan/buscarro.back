@@ -26,7 +26,7 @@ public sealed class GetVehicleDetailsHandlerTests
                 ]
             }));
 
-        var response = await handler.Handle(new GetVehicleDetailsQuery("29254"), CancellationToken.None);
+        var response = await handler.Handle(new GetVehicleDetailsQuery(29254), CancellationToken.None);
 
         Assert.Equal(["IPVA Pago"], response.Observations);
         Assert.Equal(["Air bag"], response.Optionals);
@@ -36,14 +36,14 @@ public sealed class GetVehicleDetailsHandlerTests
     }
 
     [Fact]
-    public async Task Handle_throws_validation_exception_when_external_id_is_empty()
+    public async Task Handle_throws_validation_exception_when_external_id_is_not_positive()
     {
         var handler = new GetVehicleDetailsHandler(new FakeVehicleDetailsReadService(new VehicleDetailsResponse()));
 
         var exception = await Assert.ThrowsAsync<ValidationException>(() =>
-            handler.Handle(new GetVehicleDetailsQuery(" "), CancellationToken.None));
+            handler.Handle(new GetVehicleDetailsQuery(0), CancellationToken.None));
 
-        Assert.Equal("ExternalId e obrigatorio.", exception.Message);
+        Assert.Equal("ExternalId deve ser maior que zero.", exception.Message);
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public sealed class GetVehicleDetailsHandlerTests
         var handler = new GetVehicleDetailsHandler(new FakeVehicleDetailsReadService(null));
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            handler.Handle(new GetVehicleDetailsQuery("404"), CancellationToken.None));
+            handler.Handle(new GetVehicleDetailsQuery(404), CancellationToken.None));
     }
 
     private sealed class FakeVehicleDetailsReadService : IVehicleDetailsReadService
@@ -65,7 +65,7 @@ public sealed class GetVehicleDetailsHandlerTests
         }
 
         public Task<VehicleDetailsResponse?> GetVehicleDetailsAsync(
-            string externalId,
+            int externalId,
             CancellationToken cancellationToken)
         {
             return Task.FromResult(_response);

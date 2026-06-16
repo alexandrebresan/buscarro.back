@@ -3,4 +3,4 @@ using MediatR;
 
 namespace Buscarro.Application.Queries;
 
-public sealed record GetVehicleDetailsQuery(string ExternalId) : IRequest<VehicleDetailsResponse>;
+public sealed record GetVehicleDetailsQuery(int ExternalId) : IRequest<VehicleDetailsResponse>;

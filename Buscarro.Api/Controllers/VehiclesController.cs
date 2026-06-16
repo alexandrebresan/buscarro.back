@@ -11,10 +11,14 @@ namespace Buscarro.Api.Controllers;
 public class VehiclesController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ILogger<VehiclesController> _logger;
 
-    public VehiclesController(IMediator mediator)
+    public VehiclesController(
+        IMediator mediator,
+        ILogger<VehiclesController> logger)
     {
         _mediator = mediator;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -26,9 +30,9 @@ public class VehiclesController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("details/{externalId}")]
+    [HttpGet("details/{externalId:int}")]
     public async Task<IActionResult> GetDetails(
-        string externalId,
+        int externalId,
         CancellationToken cancellationToken)
     {
         try
@@ -43,6 +47,16 @@ public class VehiclesController : ControllerBase
         catch (NotFoundException ex)
         {
             return NotFound(ex.Message);
+        }
+        catch (ProviderAccessDeniedException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Provider {Provider} recusou acesso aos detalhes do veiculo {ExternalId}.",
+                ex.Provider,
+                externalId);
+
+            return StatusCode(StatusCodes.Status502BadGateway, ex.Message);
         }
     }
 }
