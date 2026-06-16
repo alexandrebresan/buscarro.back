@@ -148,6 +148,8 @@ builder.Services.Configure<CarzinOptions>(
 
 builder.Services.AddTransient<IVehicleProvider>(serviceProvider =>
     serviceProvider.GetRequiredService<CarzinVehicleProvider>());
+builder.Services.AddTransient<IVehicleDetailsReadService>(serviceProvider =>
+    serviceProvider.GetRequiredService<CarzinVehicleProvider>());
 builder.Services.AddSingleton<IVehicleCatalogReadService, VehicleCatalogReadService>();
 
 var app = builder.Build();

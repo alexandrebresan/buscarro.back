@@ -9,7 +9,7 @@ using System.Text.Json;
 
 namespace Buscarro.Infrastructure.Providers;
 
-public sealed class CarzinVehicleProvider : IVehicleProvider
+public sealed class CarzinVehicleProvider : IVehicleProvider, IVehicleDetailsReadService
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
 
@@ -61,6 +61,30 @@ public sealed class CarzinVehicleProvider : IVehicleProvider
             CurrentPage = payload.CurrentPage,
             TotalPages = payload.TotalPages
         };
+    }
+
+    public async Task<VehicleDetailsResponse?> GetVehicleDetailsAsync(
+        string externalId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(_options.Token))
+        {
+            throw new InvalidOperationException("Token da Carzin nao configurado.");
+        }
+
+        var fields = new Dictionary<string, string>
+        {
+            ["type"] = "1",
+            ["classified"] = externalId.Trim()
+        };
+        var payload = await PostFormAsync<CarzinClassifiedDetailsResponseContract>(
+            "/api/classified-details",
+            fields,
+            cancellationToken);
+
+        return payload.Classified is null
+            ? null
+            : MapToVehicleDetails(payload.Classified);
     }
 
     private Dictionary<string, string> BuildSearchFields(
@@ -230,6 +254,38 @@ public sealed class CarzinVehicleProvider : IVehicleProvider
             JsonValueKind.String when int.TryParse(value.GetString(), out var number) => number == 1,
             _ => null
         };
+    }
+
+    private static VehicleDetailsResponse MapToVehicleDetails(CarzinClassifiedDetailsContract source)
+    {
+        return new VehicleDetailsResponse
+        {
+            Observations = NormalizeTextList(source.Observations),
+            Optionals = NormalizeTextList(source.Optionals),
+            Images = source.Images
+                .Select(MapToVehicleDetailsImage)
+                .Where(image =>
+                    !string.IsNullOrWhiteSpace(image.ImageUrl) ||
+                    !string.IsNullOrWhiteSpace(image.ThumbUrl))
+                .ToArray()
+        };
+    }
+
+    private static VehicleDetailsImageResponse MapToVehicleDetailsImage(CarzinClassifiedImageContract source)
+    {
+        return new VehicleDetailsImageResponse
+        {
+            ImageUrl = UseProviderValue(source.Image),
+            ThumbUrl = UseProviderValue(source.ImageThumb)
+        };
+    }
+
+    private static string[] NormalizeTextList(IEnumerable<string?> values)
+    {
+        return values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!.Trim())
+            .ToArray();
     }
 
 

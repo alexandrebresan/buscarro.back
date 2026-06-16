@@ -27,6 +27,68 @@ public sealed class VehicleCatalogReadServiceTests
         Assert.Equal(4, vehicle.Doors);
     }
 
+    [Theory]
+    [InlineData("price", "cheap-old", "expensive-new")]
+    [InlineData("price-inverse", "expensive-new", "cheap-old")]
+    [InlineData("year", "cheap-old", "expensive-new")]
+    [InlineData("year-inverse", "expensive-new", "cheap-old")]
+    public async Task GetSnapshotAsync_applies_requested_order_to_aggregated_results(
+        string order,
+        string firstExpectedExternalId,
+        string secondExpectedExternalId)
+    {
+        var expensiveNew = new Vehicle
+        {
+            ExternalId = "expensive-new",
+            Provider = "Carzin",
+            Brand = "A",
+            Model = "Expensive New",
+            Price = 30000,
+            Year = 2024
+        };
+        var cheapOld = new Vehicle
+        {
+            ExternalId = "cheap-old",
+            Provider = "Carzin",
+            Brand = "Z",
+            Model = "Cheap Old",
+            Price = 10000,
+            Year = 2018
+        };
+        var provider = order.EndsWith("-inverse", StringComparison.OrdinalIgnoreCase)
+            ? new FakeVehicleProvider(cheapOld, expensiveNew)
+            : new FakeVehicleProvider(expensiveNew, cheapOld);
+        var service = CreateService(provider);
+
+        var snapshot = await service.GetSnapshotAsync(
+            new VehicleSearchCriteria { Order = order },
+            CancellationToken.None);
+
+        Assert.Equal(firstExpectedExternalId, snapshot.Vehicles.First().ExternalId);
+        Assert.Equal(secondExpectedExternalId, snapshot.Vehicles.Skip(1).First().ExternalId);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("relevance")]
+    [InlineData("rand")]
+    public async Task GetSnapshotAsync_preserves_provider_order_for_provider_driven_orders(string? order)
+    {
+        var provider = new FakeVehicleProvider(
+            new Vehicle { ExternalId = "provider-first", Provider = "Carzin", Brand = "Z", Model = "Zeta", Year = 2018 },
+            new Vehicle { ExternalId = "provider-second", Provider = "Carzin", Brand = "A", Model = "Alpha", Year = 2024 });
+        var service = CreateService(provider);
+
+        var snapshot = await service.GetSnapshotAsync(
+            new VehicleSearchCriteria { Order = order },
+            CancellationToken.None);
+
+        Assert.Equal(
+            ["provider-first", "provider-second"],
+            snapshot.Vehicles.Select(vehicle => vehicle.ExternalId).ToArray());
+    }
+
     [Fact]
     public async Task GetSnapshotAsync_serves_repeated_equal_search_from_memory_cache()
     {

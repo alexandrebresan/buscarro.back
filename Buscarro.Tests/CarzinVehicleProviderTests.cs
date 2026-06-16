@@ -340,6 +340,66 @@ public sealed class CarzinVehicleProviderTests
         Assert.Equal("Versao Carzin", vehicle.Version);
     }
 
+    [Fact]
+    public async Task GetVehicleDetailsAsync_posts_carzin_details_form_without_external_id_in_url()
+    {
+        var handler = new CaptureFormHandler(DetailsJson);
+        var provider = new CarzinVehicleProvider(
+            new HttpClient(handler) { BaseAddress = new Uri("https://carzin.test") },
+            Options.Create(new CarzinOptions { BaseUrl = "https://carzin.test", Token = "token" }),
+            new FakeCatalogReadService(new VehicleProviderCatalogNames(null, null, null)));
+
+        await provider.GetVehicleDetailsAsync("29254", CancellationToken.None);
+
+        Assert.Equal("/api/classified-details", handler.RequestPath);
+        Assert.DoesNotContain("29254", handler.RequestPath);
+        Assert.Contains("name=type", handler.FormBody);
+        Assert.Contains("1", handler.FormBody);
+        Assert.Contains("name=classified", handler.FormBody);
+        Assert.Contains("29254", handler.FormBody);
+    }
+
+    [Fact]
+    public async Task GetVehicleDetailsAsync_maps_only_observations_optionals_and_images()
+    {
+        var provider = new CarzinVehicleProvider(
+            new HttpClient(new StaticJsonHandler(DetailsJson)) { BaseAddress = new Uri("https://carzin.test") },
+            Options.Create(new CarzinOptions { BaseUrl = "https://carzin.test", Token = "token" }),
+            new FakeCatalogReadService(new VehicleProviderCatalogNames(null, null, null)));
+
+        var response = await provider.GetVehicleDetailsAsync("29254", CancellationToken.None);
+
+        Assert.NotNull(response);
+        Assert.Equal(["IPVA Pago", "Unico Dono"], response.Observations);
+        Assert.Equal(["Air bag", "Ar-condicionado"], response.Optionals);
+        var image = Assert.Single(response.Images);
+        Assert.Equal("http://url.com/2211-1.jpg", image.ImageUrl);
+        Assert.Equal("http://url.com/2211-1_thumb.jpg", image.ThumbUrl);
+    }
+
+    [Fact]
+    public async Task GetVehicleDetailsAsync_returns_empty_collections_when_carzin_fields_are_missing()
+    {
+        const string json = """
+        {
+          "classified": {
+            "id": 29254
+          }
+        }
+        """;
+        var provider = new CarzinVehicleProvider(
+            new HttpClient(new StaticJsonHandler(json)) { BaseAddress = new Uri("https://carzin.test") },
+            Options.Create(new CarzinOptions { BaseUrl = "https://carzin.test", Token = "token" }),
+            new FakeCatalogReadService(new VehicleProviderCatalogNames(null, null, null)));
+
+        var response = await provider.GetVehicleDetailsAsync("29254", CancellationToken.None);
+
+        Assert.NotNull(response);
+        Assert.Empty(response.Observations);
+        Assert.Empty(response.Optionals);
+        Assert.Empty(response.Images);
+    }
+
     private sealed class FakeCatalogReadService : IVehicleProviderCatalogReadService
     {
         private readonly VehicleProviderCatalogNames _names;
@@ -450,11 +510,13 @@ public sealed class CarzinVehicleProviderTests
         }
 
         public string FormBody { get; private set; } = string.Empty;
+        public string RequestPath { get; private set; } = string.Empty;
 
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
+            RequestPath = request.RequestUri?.PathAndQuery ?? string.Empty;
             FormBody = await request.Content!.ReadAsStringAsync(cancellationToken);
 
             return new HttpResponseMessage(HttpStatusCode.OK)
@@ -471,6 +533,37 @@ public sealed class CarzinVehicleProviderTests
       "current_page": 1,
       "total_pages": 0,
       "results": []
+    }
+    """;
+
+    private const string DetailsJson = """
+    {
+      "classified": {
+        "type": 1,
+        "id": 29254,
+        "title": "Chevrolet Onix 1.4 LTZ 2011/2012",
+        "observations": [
+          "IPVA Pago",
+          "",
+          "Unico Dono"
+        ],
+        "optionals": [
+          "Air bag",
+          null,
+          "Ar-condicionado"
+        ],
+        "images": [
+          {
+            "image": "http://url.com/2211-1.jpg",
+            "image_thumb": "http://url.com/2211-1_thumb.jpg"
+          },
+          {
+            "image": "",
+            "image_thumb": ""
+          }
+        ],
+        "url": "https://carzin.com.br/comprar/carros/chevrolet/onix/29254.html"
+      }
     }
     """;
 }

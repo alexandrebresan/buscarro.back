@@ -101,6 +101,33 @@ public sealed class CarzinClassifiedContract
     public string? Url { get; set; }
 }
 
+public sealed class CarzinClassifiedDetailsResponseContract
+{
+    [JsonPropertyName("classified")]
+    public CarzinClassifiedDetailsContract? Classified { get; set; }
+}
+
+public sealed class CarzinClassifiedDetailsContract
+{
+    [JsonPropertyName("observations")]
+    public List<string?> Observations { get; set; } = [];
+
+    [JsonPropertyName("optionals")]
+    public List<string?> Optionals { get; set; } = [];
+
+    [JsonPropertyName("images")]
+    public List<CarzinClassifiedImageContract> Images { get; set; } = [];
+}
+
+public sealed class CarzinClassifiedImageContract
+{
+    [JsonPropertyName("image")]
+    public string? Image { get; set; }
+
+    [JsonPropertyName("image_thumb")]
+    public string? ImageThumb { get; set; }
+}
+
 internal sealed class FlexibleNullableIntJsonConverter : JsonConverter<int?>
 {
     public override int? Read(

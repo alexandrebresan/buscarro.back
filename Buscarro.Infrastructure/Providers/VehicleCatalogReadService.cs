@@ -203,11 +203,9 @@ public sealed class VehicleCatalogReadService : IVehicleCatalogReadService
 
         return new VehicleCatalogSnapshot
         {
-            Vehicles = filteredProviders
-                .SelectMany(provider => provider.Vehicles)
-                .OrderBy(vehicle => vehicle.Brand)
-                .ThenBy(vehicle => vehicle.Model)
-                .ThenByDescending(vehicle => vehicle.Year)
+            Vehicles = ApplyRequestedOrder(
+                    filteredProviders.SelectMany(provider => provider.Vehicles),
+                    requestCriteria.Order)
                 .ToArray(),
             Providers = filteredProviders
         };
@@ -249,6 +247,27 @@ public sealed class VehicleCatalogReadService : IVehicleCatalogReadService
             .Where(vehicle => criteria.PriceMax is null || vehicle.Price <= criteria.PriceMax.Value)
             .Where(vehicle => criteria.YearMin is null || vehicle.Year >= criteria.YearMin.Value)
             .Where(vehicle => criteria.YearMax is null || vehicle.Year <= criteria.YearMax.Value);
+    }
+
+    private static IEnumerable<Vehicle> ApplyRequestedOrder(
+        IEnumerable<Vehicle> vehicles,
+        string? order)
+    {
+        return NormalizeOrder(order) switch
+        {
+            "price" => vehicles.OrderBy(vehicle => vehicle.Price),
+            "price-inverse" => vehicles.OrderByDescending(vehicle => vehicle.Price),
+            "year" => vehicles.OrderBy(vehicle => vehicle.Year),
+            "year-inverse" => vehicles.OrderByDescending(vehicle => vehicle.Year),
+            _ => vehicles
+        };
+    }
+
+    private static string NormalizeOrder(string? order)
+    {
+        return string.IsNullOrWhiteSpace(order)
+            ? string.Empty
+            : order.Trim().ToLowerInvariant();
     }
 
     private void IndexRecentVehicles(IEnumerable<Vehicle> vehicles)
