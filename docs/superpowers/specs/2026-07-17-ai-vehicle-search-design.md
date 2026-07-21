@@ -6,111 +6,183 @@
 
 **Última revisão:** 2026-07-21
 
-**Escopo:** interpretação de prompts em critérios de busca; não inclui ranking semântico
+**Escopo:** tradução de prompt em navegação canônica; não inclui ranking semântico
 
 ## 1. Objetivo
 
-Adicionar uma busca em linguagem natural ao Buscarro. O usuário informa um prompt como:
+Adicionar ao Buscarro uma entrada em linguagem natural que traduza o pedido do usuário em uma URL relativa, segura e reproduzível para a busca convencional.
 
-> Quero um carro seminovo para família, automático, até 100 mil reais em São Paulo.
+O fluxo será deliberadamente dividido em dois requests:
 
-O sistema interpreta o texto, produz uma intenção canônica estruturada, aplica regras de produto versionadas, resolve os critérios suportados e consulta o fluxo existente de veículos e providers.
+1. o frontend envia o prompt ao `POST /api/vehicles/ai-search`;
+2. o backend interpreta o prompt e devolve uma `searchUrl` relativa;
+3. o frontend chama `GET {searchUrl}` para obter veículos normalizados e status dos providers.
 
-O resultado deve conter:
+O POST é apenas um tradutor de prompt para navegação. Ele não consulta veículos, não chama `IVehicleCatalogReadService` e não retorna veículos ou status de provider.
 
-- critérios explícitos identificados no prompt;
-- critérios derivados de perfis semânticos;
-- suposições e regras aplicadas;
-- perfis reconhecidos mas não aplicáveis;
-- veículos normalizados;
-- status individual dos providers.
+A resposta do POST contém obrigatoriamente:
+
+- `aiSearch: true`;
+- o prompt normalizado;
+- `searchUrl` relativa;
+- warnings e metadados de interpretação quando aplicáveis.
+
+Os dois roundtrips são um trade-off aceito: preservam uma única execução da busca, permitem que a URL seja editada, compartilhada e repetida e mantêm o GET como fonte única dos resultados.
 
 ## 2. Não objetivos
 
 O MVP não inclui:
 
+- consulta de veículos ou providers pelo POST de IA;
+- retorno de `criteria`, `vehicles` ou `providers` pelo POST;
+- geração de URL pelo modelo;
+- URL absoluta, redirect HTTP ou navegação executada pelo backend;
 - ordenação por relevância semântica;
 - recomendação personalizada;
 - RAG, embeddings ou banco vetorial;
 - fine-tuning;
 - memória conversacional;
 - agente autônomo;
-- acesso do modelo a HTTP, SQL ou providers;
-- geração de URLs pelo modelo;
+- acesso do modelo a HTTP, SQL, catálogo ou providers;
+- fuzzy matching que escolha silenciosamente uma entidade;
+- IDs de provider no contrato canônico ou na URL gerada pela IA;
 - inferência de consumo, segurança ou custo de manutenção sem dados confiáveis.
 
 ## 3. Decisões principais
 
-### 3.1 Endpoint único
+### 3.1 POST tradutor e GET executor
 
-Será criado um endpoint orquestrador:
+O endpoint de IA será:
 
 ```http
 POST /api/vehicles/ai-search
 ```
 
-O backend não deve chamar seu próprio `GET /api/vehicles` por HTTP. O Handler reutilizará `IVehicleCatalogReadService`, o mesmo serviço utilizado pelo fluxo atual. Se o mapeamento de `Vehicle` para `VehicleResponse` ficar duplicado, ele deverá ser extraído para um mapper compartilhado na Application.
+O Handler interpreta a intenção, aplica regras semânticas e usa o output port `IVehicleSearchUrlBuilder` para montar a resposta completa. A interface pertence à Application e opera somente com DTOs/string da própria Application, sem tipos ASP.NET. Sua implementação `VehicleSearchUrlBuilder` permanece na borda da API. O frontend usa a URL retornada para chamar:
 
-Como pré-requisito, `IVehicleCatalogReadService` deverá passar a aceitar `CanonicalVehicleSearchCriteria`. O `GET /api/vehicles` continuará compatível por meio de uma adaptação dos filtros manuais para esse contrato canônico antes de chamar o serviço.
+```http
+GET /api/vehicles
+```
 
-O `GET /api/vehicles` permanece disponível para filtros manuais e para buscas posteriores após o usuário editar os critérios interpretados.
+Somente o GET chama `IVehicleCatalogReadService` e os providers.
 
-### 3.2 Uma chamada ao modelo
+### 3.2 URL determinística
 
-O modelo terá uma única responsabilidade: extrair intenção explícita e classificar perfis semânticos. Ele não consultará veículos nem produzirá critérios específicos de provider.
+`VehicleSearchUrlBuilder` gera a URL no backend, nunca no LLM. O builder deve:
 
-### 3.3 Regras subjetivas ficam no backend
+- aceitar apenas uma allowlist de campos canônicos;
+- usar path fixo `/api/vehicles`;
+- aplicar percent-encoding correto;
+- serializar números com `InvariantCulture`;
+- produzir ordem estável dos parâmetros;
+- omitir somente valores `null` ou vazios;
+- nunca emitir host, scheme, fragment, credenciais ou IDs de provider.
 
-Expressões como “para família”, “seminovo” e “para iniciante” serão classificadas pelo modelo em códigos fechados. A transformação desses códigos em filtros será realizada por regras determinísticas, versionadas e testáveis no backend.
+Um critério explícito jamais é descartado por ser “não suportado”: se sua dimensão global estiver habilitada, o builder deve serializá-lo; se estiver desabilitada, o POST deve rejeitá-lo explicitamente com `422`. A allowlist é gerada a partir do registry de dimensões globalmente habilitadas.
 
-Structured Outputs controla o formato do JSON. O prompt de sistema e os exemplos orientam a classificação. As regras da aplicação controlam os filtros efetivamente aplicados. A aderência ao schema não garante que a interpretação semântica esteja correta; por isso, a qualidade será medida por evals.
+A URL não será armazenada em cache: será reconstruída a cada request a partir da intenção validada e das regras atuais.
 
-## 4. Fluxo
+### 3.3 Contrato canônico e transição
+
+O GET passará a aceitar estes parâmetros canônicos:
+
+- `manufacturer_name`;
+- `model_name`;
+- `version_name`;
+- `city_name`;
+- `color_name`;
+- `gear_name`;
+- `fuel_name`.
+
+Os parâmetros numéricos atuais serão preservados temporariamente para compatibilidade. Se o request informar a forma canônica e a numérica do mesmo campo, o GET retorna `400`, mesmo que os valores aparentem ser equivalentes.
+
+O POST gera exclusivamente parâmetros `*_name`; nunca gera a forma numérica legada.
+
+### 3.4 Uma chamada ao modelo
+
+O modelo terá uma única responsabilidade: extrair intenção explícita e classificar perfis semânticos em Structured Outputs. Ele não produz URLs, IDs, objetos de provider ou veículos.
+
+Regras subjetivas permanecem determinísticas no backend e são aplicadas sobre critérios canônicos.
+
+### 3.5 Registry de dimensões
+
+`IVehicleSearchDimensionRegistry` é a fonte única para códigos de dimensão, nomes canônicos, parâmetros de URL, dependências de pais, estado habilitado, ordem de serialização e versão/fingerprint. Ele é consumido por:
+
+- `SearchVehiclesByAiHandler`, para rejeitar dimensão desabilitada;
+- schema factory/interpreter, para gerar somente campos habilitados;
+- `VehicleSearchUrlBuilder`, para gerar allowlist e ordem estável;
+- validações de startup, cache, observabilidade e testes.
+
+`ConfiguredVehicleSearchDimensionRegistry`, em Infrastructure/Providers, materializa a configuração e falha no startup se houver nomes ou parâmetros duplicados, hierarquia inválida, ordem ambígua ou divergência entre schema e allowlist. Nenhum consumidor mantém uma lista paralela de dimensões.
+
+## 4. Fluxos
+
+### 4.1 Tradução por IA
 
 ```text
 Frontend
   → POST /api/vehicles/ai-search
-  → Controller
+  → VehicleAiSearchController
   → SearchVehiclesByAiQuery
   → SearchVehiclesByAiHandler
+      → cache de intenção validada
       → IVehicleSearchIntentInterpreter
-      → validação da intenção
+      → validação e normalização da intenção
       → ISemanticProfileCatalog
       → IVehicleSemanticProfileResolver
+      → IVehicleSearchDimensionRegistry
       → CanonicalVehicleSearchCriteria
-      → IVehicleCatalogReadService
-          → cada IVehicleProvider traduz nomes/enums para seus códigos no próprio adapter/mapper
-  → critérios + interpretação + veículos + status dos providers
+      → IVehicleSearchUrlBuilder
+          → Api/Routing/VehicleSearchUrlBuilder
+  → VehicleAiSearchResponse
+  → aiSearch + prompt normalizado + searchUrl + warnings/metadata
+```
+
+### 4.2 Execução da busca
+
+```text
+Frontend
+  → GET {searchUrl}
+  → VehiclesController
+  → VehicleSearchRequest
+  → IVehicleSearchRequestCanonicalizer
+      → parâmetros *_name permanecem canônicos
+      → IDs legados Carzin são resolvidos para nomes canônicos
+  → CanonicalVehicleSearchCriteria
+  → FindAllVehiclesQuery
+  → FindAllVehiclesHandler
+  → IVehicleCatalogReadService
+      → cada IVehicleProvider recebe critérios canônicos
+      → mapper do provider resolve nomes/enums para seus ProviderCodes
+  → veículos normalizados + status/unsupportedCriteria por provider
 ```
 
 O `CancellationToken` deve ser preservado em todas as etapas.
 
-## 5. Controle da saída do modelo
+`VehicleAiSearchController` permanece fino: sua ação equivale a `Ok(await mediator.Send(...))`, preservando apenas binding, cancellation e tradução de exceções para status HTTP.
+
+## 5. Intenção e perfis semânticos
 
 ### 5.1 JSON Schema estrito
 
-O modelo deverá responder de acordo com um JSON Schema com estas propriedades:
+O modelo responde com schema estrito:
 
 - todos os campos definidos como obrigatórios;
-- campos não informados representados por `null`;
-- `additionalProperties: false` em todos os objetos;
-- enums fechados para valores categóricos;
-- `semanticProfiles` limitado a códigos conhecidos;
-- nenhuma propriedade para IDs, URLs, SQL, providers ou veículos.
+- ausências representadas por `null`;
+- `additionalProperties: false`;
+- enums fechados;
+- `semanticProfiles` limitado aos códigos do registry;
+- nenhuma propriedade para URL, IDs, providers ou veículos.
 
-Exemplo conceitual da saída do modelo:
+Exemplo conceitual:
 
 ```json
 {
   "explicitCriteria": {
     "query": null,
-    "brand": null,
-    "model": null,
-    "version": null,
-    "transmission": "automatic",
-    "fuel": null,
-    "color": null,
-    "city": "São Paulo",
+    "manufacturerName": "Honda",
+    "modelName": "Civic",
+    "versionName": null,
     "state": "SP",
     "priceMin": null,
     "priceMax": 100000,
@@ -123,97 +195,44 @@ Exemplo conceitual da saída do modelo:
 }
 ```
 
-`semanticProfiles` é uma lista ordenada pela primeira menção no prompt. O modelo não deve ordenar alfabeticamente; códigos repetidos são deduplicados preservando a primeira ocorrência. No exemplo, “seminovo” aparece antes de “família”, portanto a ordem correta é `semi_new`, `family`.
+`semanticProfiles` preserva a ordem da primeira menção. O backend valida os códigos contra `ISemanticProfileCatalog`, mantém a ordem recebida, deduplica preservando a primeira ocorrência e calcula `mentionOrder` após a normalização.
 
-Essa regra não depende apenas do modelo. O backend valida cada código contra `ISemanticProfileCatalog`, preserva a ordem recebida, deduplica mantendo a primeira ocorrência e só então calcula `mentionOrder` sobre a lista normalizada. Códigos desconhecidos são rejeitados pela validação da intenção e nunca chegam ao merge engine.
+O schema factory gera o schema ativo exclusivamente a partir de `IVehicleSearchDimensionRegistry`, contendo somente dimensões globalmente habilitadas. Manufacturer, model e version estão habilitados com o catálogo atual. City, color, gear e fuel permanecem fora do schema até passarem pelo gate de capacidades. Quando gear for habilitado, o nome canônico será sempre `gearName` no schema, nos critérios, nas regras de profile e na URL; `transmission` não será usado como campo alternativo.
 
-Os códigos iniciais permitidos em `semanticProfiles` serão:
+O POST valida schema, intervalos, contradições semânticas e a presença estrutural dos pais (`manufacturerName` para model/version, `modelName` para version e `state` para city). Ele não decide se nomes existem, se a combinação consta do catálogo ou se há ambiguidade: essa validação autoritativa ocorre no GET e nos mappers dos providers. Portanto, uma URL sintaticamente válida produzida pelo POST ainda pode resultar em `422` ou falha de provider no GET.
 
-- `beginner`;
-- `family`;
-- `semi_new`;
-- `economic`.
+### 5.2 Precedência
 
-O enum do schema será gerado a partir do catálogo de perfis, que é a fonte única dos códigos. Novos códigos exigem atualização do catálogo, regras, exemplos e evals; o schema e seu fingerprint serão regenerados automaticamente.
+1. Critérios explícitos vencem qualquer outra fonte, por campo.
+2. Profiles são processados da esquerda para a direita.
+3. Entre profiles, o primeiro vence somente campos conflitantes; posteriores preenchem campos livres.
+4. Defaults são aplicados por último e somente a campos livres.
+5. Defaults aparecem na proveniência final, mas nunca como winner de conflito.
+6. Um profile `unsupported` não bloqueia os posteriores.
+7. `partial` exige ao menos um `appliedField` e um `skippedField`.
 
-### 5.2 Prompt e exemplos
+O merge engine é genérico e orientado pelo registry, sem `switch` por profile.
 
-O prompt de sistema deverá:
+### 5.3 Profiles iniciais
 
-- extrair apenas informações afirmadas pelo usuário;
-- usar `null` quando um critério não for informado;
-- reconhecer paráfrases de perfis conhecidos;
-- não definir limites numéricos para termos subjetivos;
-- não inventar IDs ou entidades de catálogo;
-- registrar termos sem suporte em `unresolvedTerms`;
-- preservar contradições para validação da aplicação.
+- `semi_new`: deriva `yearMin` com `TimeProvider` e configuração versionada; o cálculo ocorre em todo POST, inclusive após cache hit da intenção;
+- `beginner`: pode preencher somente campos canônicos suportados e configurados; qualquer regra de câmbio usa exclusivamente `gearName` quando essa dimensão estiver habilitada;
+- `family`: `unsupported` no MVP por falta de dados confiáveis;
+- `economic`: `unsupported` no MVP; combustível não comprova economia.
 
-Exemplos few-shot devem ensinar classificação, não política de produto:
+`family` ou `economic` sozinhos não deixam intenção executável e resultam em `422`. Quando aparecem junto de filtros aplicáveis, o POST pode retornar `200`, com warning e resolução `unsupported`, sem bloquear a URL.
 
-```text
-“meu primeiro carro” → semanticProfiles: ["beginner"]
-“um carro para levar as crianças” → semanticProfiles: ["family"]
-“quero um seminovo” → semanticProfiles: ["semi_new"]
-“quero algo que gaste pouco” → semanticProfiles: ["economic"]
-```
+`unresolvedTerms` vira warnings somente quando os critérios restantes permitem gerar uma URL fiel. Se o termo não resolvido for indispensável ao pedido ou não restar intenção aplicável, o POST retorna `422` em vez de produzir uma navegação enganosa.
 
-## 6. Perfis semânticos
+Nenhum profile pode ser habilitado apenas por configuração quando as capacidades requeridas não existem no catálogo e nos providers.
 
-### 6.1 Contrato das regras
+## 6. Contrato do POST
 
-Cada perfil terá:
-
-- código estável;
-- `rulesVersion`;
-- estado habilitado ou desabilitado;
-- critérios derivados configurados;
-- lista de capacidades/dados necessários;
-- warning para aplicação parcial ou impossibilidade de aplicação.
-
-Regras de precedência:
-
-1. Restrições e filtros explícitos do usuário vencem qualquer outra fonte, por campo.
-2. Perfis são processados da esquerda para a direita, na ordem de primeira menção.
-3. Entre perfis, o primeiro vence apenas os campos conflitantes; perfis posteriores continuam preenchendo campos livres.
-4. Defaults técnicos são aplicados por último e somente em campos ainda livres.
-5. Contradições explícitas não são corrigidas silenciosamente.
-6. Um perfil sem suporte não bloqueia os posteriores e deve ser devolvido como `unsupported`; um perfil que aplica apenas parte de suas regras deve ser `partial`.
-
-O merge será orientado por dados: cada definição do catálogo declara os campos que pretende derivar, e um engine genérico aplica precedência e registra conflitos. Não haverá `switch` por código de perfil no pipeline.
-
-O catálogo/registry é a fonte única para código, ordem de regras, `rulesVersion`, campos derivados, capacidades requeridas e estado operacional. Na inicialização, a aplicação deve falhar cedo se houver códigos duplicados, campos desconhecidos, regra inválida, enum de schema divergente ou perfil habilitado sem as capacidades exigidas. Adicionar um perfil que use campos já suportados não muda o pipeline; adicionar um novo filtro exige evoluir DTOs, resolução canônica e os adapters dos providers que o suportarem.
-
-### 6.2 Perfil `semi_new`
-
-O modelo apenas classifica o perfil. O backend calcula:
-
-```text
-YearMin = TimeProvider.GetUtcNow().Year - SemiNewMaxAgeYears
-```
-
-`SemiNewMaxAgeYears` é uma configuração obrigatória para habilitar o perfil. O serviço não deve iniciar com o perfil habilitado se a configuração for inválida. Um `yearMin` explícito do usuário vence o valor derivado.
-
-### 6.3 Perfil `family`
-
-O sistema atual não possui critérios confiáveis de lugares, categoria de carroceria, volume do porta-malas ou segurança. Portanto, no MVP o modelo pode reconhecer `family`, mas o backend deve devolvê-lo somente em `profileResolutions`, com `status: unsupported` e o código `FAMILY_PROFILE_UNSUPPORTED` em `skippedFields.reason`.
-
-O perfil só poderá ser habilitado quando existirem dados e filtros confiáveis. Não será permitido traduzir automaticamente `family` para SUV ou para marcas/modelos específicos. Uma flag de configuração, sozinha, não pode habilitá-lo: o registry deve validar também as capacidades de catálogo e provider. Enquanto estiver `unsupported`, sua presença não impede que perfis posteriores sejam processados.
-
-### 6.4 Perfil `beginner`
-
-O perfil pode preencher apenas critérios configurados e já suportados, como `priceMax` e transmissão. Os valores devem ser definidos pelo produto em configuração versionada. Se o usuário solicitar transmissão automática, essa escolha vence um default manual do perfil.
-
-### 6.5 Perfil `economic`
-
-`Fuel` não representa consumo. Sem km/l, custo de manutenção ou outro indicador confiável, no MVP o perfil será reconhecido e devolvido em `profileResolutions` com `status: unsupported` e `ECONOMIC_PROFILE_UNSUPPORTED`. O sistema não afirmará que um veículo é econômico com base apenas no combustível. `partial` só é válido quando existir pelo menos um item em `appliedFields` e pelo menos um em `skippedFields`.
-
-## 7. Contrato HTTP
-
-### 7.1 Requisição
+### 6.1 Requisição
 
 ```json
 {
-  "prompt": "Quero um carro seminovo para família, automático, até 100 mil em SP",
+  "prompt": "Quero um Honda Civic seminovo para família, até 100 mil em SP",
   "page": 1,
   "results": 20,
   "locale": "pt-BR"
@@ -225,34 +244,33 @@ Validações:
 - prompt obrigatório, normalizado e limitado;
 - `page >= 1`;
 - `results` dentro do limite configurado;
-- locale permitido por allowlist;
+- locale em allowlist;
 - intervalos coerentes;
+- presença estrutural dos pais nas hierarquias canônicas;
 - nenhuma contradição explícita irreconciliável.
 
-### 7.2 Resposta
+Existência, combinação e ambiguidade no catálogo não são validadas pelo POST.
+
+### 6.2 Resposta
 
 ```json
 {
-  "status": "completed",
-  "interpretation": {
-    "explicitCriteria": {
-      "transmission": "automatic",
-      "priceMax": 100000,
-      "state": "SP"
-    },
-    "derivedCriteria": {
-      "yearMin": {
-        "value": 2023,
-        "source": "semantic_profile:semi_new",
-        "rulesVersion": "2026-07-17"
-      }
-    },
+  "aiSearch": true,
+  "prompt": "Quero um Honda Civic seminovo para família, até 100 mil em SP",
+  "searchUrl": "/api/vehicles?page=1&results=20&state=SP&manufacturer_name=Honda&model_name=Civic&price_max=100000&year_min=2023",
+  "warnings": [
+    {
+      "code": "FAMILY_PROFILE_UNSUPPORTED"
+    }
+  ],
+  "metadata": {
+    "status": "completed",
     "profileResolutions": [
       {
         "code": "semi_new",
         "mentionOrder": 0,
         "status": "applied",
-        "rulesVersion": "2026-07-17",
+        "rulesVersion": "2026-07-21",
         "appliedFields": ["yearMin"],
         "skippedFields": []
       },
@@ -260,7 +278,7 @@ Validações:
         "code": "family",
         "mentionOrder": 1,
         "status": "unsupported",
-        "rulesVersion": "2026-07-17",
+        "rulesVersion": "2026-07-21",
         "appliedFields": [],
         "skippedFields": [
           {
@@ -272,123 +290,227 @@ Validações:
       }
     ],
     "finalCriteriaProvenance": {
-      "transmission": "explicit",
+      "manufacturerName": "explicit",
+      "modelName": "explicit",
       "priceMax": "explicit",
       "state": "explicit",
       "yearMin": "semantic_profile:semi_new"
-    },
-    "unresolvedTerms": [],
-    "warnings": []
-  },
-  "criteria": {
-    "transmission": "automatic",
-    "priceMax": 100000,
-    "yearMin": 2023,
-    "state": "SP",
-    "page": 1,
-    "results": 20
-  },
-  "vehicles": [],
-  "providers": []
+    }
+  }
 }
 ```
 
-O valor `2023` é apenas ilustrativo para demonstrar a resposta; em execução ele será calculado com `TimeProvider` e a configuração vigente. Cada profile deve informar `status` (`applied`, `partial` ou `unsupported`), `mentionOrder`, `appliedFields` e `skippedFields`. `partial` exige ao menos um campo aplicado; sem nenhum `appliedField`, o profile é `unsupported`. Um campo ignorado por conflito deve incluir `reason` e o `winner` (`explicit` ou outro profile). Defaults não disputam campos: são aplicados somente aos livres e aparecem apenas na proveniência final. A proveniência dos critérios derivados e finais deve permitir explicar a decisão sem expor o prompt de sistema.
+O valor `2023` é apenas ilustrativo; a execução usa `TimeProvider`. O prompt retornado é normalizado, mas continua sendo entrada não confiável. O frontend deve renderizá-lo como texto, nunca como HTML.
 
-Estados possíveis:
+### 6.3 Status HTTP do POST
 
-- `completed`;
-- `needs_clarification`;
-- `unsupported`;
-- `fallback`.
-
-O status agregado será `completed` sempre que restar uma busca executável, mesmo que uma ou mais resoluções de profile sejam `unsupported`. Será `unsupported` somente quando nenhuma intenção aplicável restar. `needs_clarification` será usado quando a busca depender de uma ambiguidade que não possa ser resolvida com segurança; `fallback`, quando o caminho alternativo explícito for acionado após falha do modelo ou de sua validação.
-
-Uma URL relativa pode ser construída deterministicamente pela aplicação a partir dos critérios finais. O modelo não gera nem executa URLs.
-
-## 8. Erros e fallback
-
-- `200`: busca concluída, necessidade de esclarecimento ou falha parcial de provider representada no corpo;
-- `400`: prompt vazio, excessivo ou request inválido;
-- `422`: intenção contraditória ou fora do domínio;
+- `200`: intenção aplicável e `searchUrl` construída;
+- `400`: request inválido ou prompt vazio/excessivo;
+- `422`: contradição semântica, pai estrutural ausente, dimensão global desabilitada, termo indispensável não resolvido ou nenhuma intenção aplicável;
 - `429`: rate limit excedido;
 - `502`: saída inválida ou falha de protocolo do modelo;
 - `503`: modelo indisponível ou circuito aberto;
 - `504`: timeout da interpretação.
 
-Fallbacks nunca serão silenciosos. A resposta deve indicar `status: fallback`, o motivo sanitizado e quais critérios foram aplicados. Detalhes técnicos, prompts internos, credenciais e respostas brutas não serão expostos.
+O POST nunca mascara falha do modelo com URL inventada.
 
-## 9. Arquitetura por camada
+## 7. Contrato e canonicalização do GET
+
+`VehicleSearchRequest` será o contrato HTTP e ficará separado de `CanonicalVehicleSearchCriteria`.
+
+Por compatibilidade, `VehicleSearchRequest` é a única exceção transitória em Application/DTOs que pode conter IDs legados Carzin, exclusivamente na entrada HTTP. O canonicalizer elimina esses IDs antes de criar a Query canônica e antes de qualquer chamada ao serviço ou provider. Nenhum outro DTO, Query, cache key ou caminho após a canonicalização pode conter IDs específicos da Carzin.
+
+Além dos novos campos `*_name`, ele preserva durante a transição os campos atuais, como `manufacturer`, `model`, `version`, `city`, `color`, `gear` e `fuel`, junto de paginação, preço, ano, estado, query e ordenação.
+
+`IVehicleSearchRequestCanonicalizer` executa:
+
+1. valida conflito canônico + numérico por campo e retorna `400`;
+2. normaliza nomes, enums, estado, intervalos e paginação de forma genérica;
+3. valida a presença estrutural dos pais;
+4. quando houver IDs legados, delega exclusivamente a `ILegacyVehicleSearchCriteriaAdapter`;
+5. produz `CanonicalVehicleSearchCriteria`;
+6. usa somente os critérios canônicos para a chave do cache de veículos.
+
+`CarzinLegacyVehicleSearchCriteriaAdapter` é a implementação transitória de ProviderCode → nome para os parâmetros numéricos atuais. Ela não faz o caminho nome → ProviderCode e não concentra resolução dos demais providers. Cada mapper de provider continua responsável pela resolução canônica autoritativa de nomes e pela validação de existência, combinação e ambiguidade.
+
+Assim, requests equivalentes por ID legado e por nome convergem para a mesma chave e o mesmo resultado canônico.
+
+Ausência estrutural do pai necessário retorna `422` no canonicalizer. Entidade inexistente, combinação hierárquica inválida ou ambígua é detectada autoritativamente no GET/provider e resulta em `422` quando a rejeição atingir todos os providers aplicáveis. Matching aproximado pode sugerir esclarecimento, mas nunca seleciona um valor silenciosamente.
+
+## 8. URL de busca
+
+A ordem estável base dos parâmetros habilitados será:
+
+```text
+query, order, page, results, state,
+manufacturer_name, model_name, version_name,
+price_min, price_max, year_min, year_max
+```
+
+Após o gate de capacidades, campos opcionais entram em posições estáveis: `city_name` após state e `color_name`, `gear_name`, `fuel_name` após year_max. O builder usa somente a allowlist gerada das dimensões habilitadas. Campos futuros exigem atualização explícita do contrato, registry, testes e capacidades dos providers.
+
+Exemplos de garantias:
+
+- `São Paulo` é codificado como query string válida;
+- decimais não dependem da cultura da máquina;
+- ordem de propriedades do objeto não altera a URL;
+- `null` não gera parâmetro;
+- todo critério explícito de dimensão habilitada gera parâmetro;
+- a saída começa com `/api/vehicles?`;
+- a saída não contém `://`, `#`, host ou parâmetros numéricos de catálogo.
+
+## 9. Catálogo e providers
+
+`IVehicleCatalogReadService` e `IVehicleProvider` passam a receber `CanonicalVehicleSearchCriteria`. Cada provider traduz nomes/enums canônicos para `ProviderCode` dentro de seu próprio mapper em Infrastructure.
+
+Para Carzin:
+
+- manufacturer, model e version usam as tabelas atuais;
+- city precisa de tabela e sincronização escopada por state;
+- color, gear e fuel precisam de tabelas e sincronização próprias;
+- migrations, contratos de seed e paths externos desses catálogos são dependências explícitas do MVP antes de habilitar os filtros correspondentes.
+
+Não serão aceitos IDs inventados, dicionários mágicos em código ou omissão silenciosa de filtros. Se um provider não puder mapear um critério, seu resultado será uma falha parcial com `unsupportedCriteria` detalhado e sanitizado; os demais providers continuam.
+
+O mapper valida e resolve todos os critérios antes da chamada externa. Se rejeitar algum deles, o provider não é chamado, retorna zero veículos e `Success = false` com `unsupportedCriteria` preenchido.
+
+### 9.1 Resolução hierárquica
+
+- ordem: `manufacturer → model → version` e `state → city`;
+- primeiro matching exato após normalização de case, acentos e whitespace;
+- um filho exige o pai;
+- múltiplos matches são ambíguos;
+- ausência do pai ou ambiguidade resulta em `422`;
+- fuzzy matching nunca escolhe silenciosamente;
+- nomes não mapeáveis ou capacidades ausentes em um provider aparecem em `unsupportedCriteria`, nunca são descartados.
+
+O adaptador legado ProviderCode → nome é exclusivo da transição do GET. O caminho canônico nome → ProviderCode continua isolado no mapper de cada provider.
+
+### 9.2 Status dos providers e status agregado do GET
+
+`ProviderStatusResponse` terá o contrato completo:
+
+```json
+{
+  "provider": "Carzin",
+  "success": false,
+  "fromCache": false,
+  "usedStaleCache": false,
+  "error": "Critérios não suportados por este provider.",
+  "currentResults": 0,
+  "currentPage": 1,
+  "unsupportedCriteria": [
+    {
+      "field": "cityName",
+      "value": "São Paulo",
+      "reason": "CATALOG_DIMENSION_UNAVAILABLE"
+    }
+  ]
+}
+```
+
+Agregação HTTP do GET:
+
+- `200` se ao menos um provider tiver `Success = true`, inclusive em sucesso parcial;
+- `422` se todos os providers aplicáveis rejeitarem os critérios antes da chamada externa;
+- `503` se nenhum provider tiver sucesso e todos os providers que aceitaram os critérios falharem por indisponibilidade;
+- rejeições e indisponibilidades permanecem discriminadas por provider no corpo, sem converter uma em outra.
+
+## 10. Arquitetura por camada
 
 ```text
 Buscarro.Api/
   Controllers/
     VehicleAiSearchController.cs
+    VehiclesController.cs
+  Routing/
+    VehicleSearchUrlBuilder.cs
   Configurations/
     AiSearchConfiguration.cs
+    VehicleSearchConfiguration.cs
 
 Buscarro.Application/
   Queries/
     SearchVehiclesByAiQuery.cs
+    FindAllVehiclesQuery.cs
   Handlers/
     SearchVehiclesByAiHandler.cs
+    FindAllVehiclesHandler.cs
   Rules/
     VehicleSemanticProfileResolver.cs
     SemanticProfileMergeEngine.cs
+    VehicleSearchRequestCanonicalizer.cs
   DTOs/
     VehicleAiSearchRequest.cs
+    VehicleAiSearchResponse.cs
+    VehicleSearchRequest.cs
     VehicleSearchIntent.cs
     CanonicalVehicleSearchCriteria.cs
-    VehicleAiSearchResponse.cs
     VehicleSearchInterpretationResponse.cs
+    UnsupportedCriterionResponse.cs
   Interfaces/
     IVehicleSearchIntentInterpreter.cs
     ISemanticProfileCatalog.cs
     IVehicleSemanticProfileResolver.cs
+    IVehicleSearchDimensionRegistry.cs
+    IVehicleSearchUrlBuilder.cs
+    IVehicleSearchRequestCanonicalizer.cs
+    ILegacyVehicleSearchCriteriaAdapter.cs
+    IVehicleCatalogReadService.cs
+    IVehicleProvider.cs
+
+Buscarro.Domain/
+  Entities/
+    VehicleProviderCity.cs
+    VehicleProviderColor.cs
+    VehicleProviderGear.cs
+    VehicleProviderFuel.cs
 
 Buscarro.Infrastructure/
   Contracts/
     OpenAiVehicleSearchIntentContract.cs
+    CarzinCityCatalogContract.cs
+    CarzinColorCatalogContract.cs
+    CarzinGearCatalogContract.cs
+    CarzinFuelCatalogContract.cs
   Providers/
     OpenAiVehicleSearchIntentInterpreter.cs
+    OpenAiVehicleSearchSchemaFactory.cs
     ConfiguredSemanticProfileCatalog.cs
+    ConfiguredVehicleSearchDimensionRegistry.cs
     AiSearchOptions.cs
     VehicleSemanticProfileOptions.cs
+    CarzinLegacyVehicleSearchCriteriaAdapter.cs
     CarzinVehicleSearchCriteriaMapper.cs
+    CarzinVehicleProvider.cs
+    CarzinCatalogSeedSyncService.cs
+  Persistence/
+    Configurations/
+      VehicleProviderCityConfiguration.cs
+      VehicleProviderColorConfiguration.cs
+      VehicleProviderGearConfiguration.cs
+      VehicleProviderFuelConfiguration.cs
+    Migrations/
 ```
 
 Responsabilidades:
 
-- API: binding, autenticação/rate limit e MediatR;
-- Application: validação, precedência, orquestração e resposta;
-- Domain: permanece sem dependência de IA;
-- Infrastructure: SDK do modelo, contrato externo, implementação configurada do catálogo/registry e configuração técnica.
+- API: binding HTTP, status, rate limit, URL relativa e registro de DI;
+- Application/Handlers: somente orquestração MediatR;
+- Application/Rules: precedência, merge e proveniência determinísticos;
+- Application/DTOs: contratos internos e canônicos; somente `VehicleSearchRequest` admite IDs Carzin como exceção transitória de entrada;
+- Domain: permanece sem IA ou contratos externos;
+- Infrastructure/Contracts: contratos externos usados pelo seed/sync;
+- Infrastructure/Persistence: configuração EF e migrations das entidades de catálogo do Domain;
+- Infrastructure/Providers: SDK, sync, adapter legado e tradução específica por provider.
 
-`ISemanticProfileCatalog`, definido na Application, expõe definições canônicas sem tipos do SDK ou de configuração. `ConfiguredSemanticProfileCatalog`, na Infrastructure, materializa e valida essas definições a partir das opções. `VehicleSemanticProfileResolver` e `SemanticProfileMergeEngine` ficam na extensão arquitetural focada `Application/Rules`, pois precedência e proveniência são regras determinísticas de aplicação; `Application/Handlers` permanece reservado aos Handlers MediatR. As opções técnicas ficam junto das implementações em `Infrastructure/Providers`, enquanto binding, validação de inicialização e registro de DI ficam em `Api/Configurations`.
+`IVehicleSearchUrlBuilder` é um output port da Application que usa apenas DTOs/string da Application. `VehicleSearchUrlBuilder`, sua implementação em `Api/Routing`, conhece o path e a serialização HTTP; o Handler chama a porta e retorna `VehicleAiSearchResponse` completa, enquanto o Controller apenas envia a Query ao MediatR e envolve o resultado em `Ok`. Antes da implementação, `AGENTS.md` deve registrar `Application/Rules` e `Api/Routing` como extensões arquiteturais permitidas, mantendo a Application sem tipos ASP.NET.
 
-Não haverá um resolvedor central de catálogo. A Application entrega `CanonicalVehicleSearchCriteria` ao catálogo; cada implementação de `IVehicleProvider` é responsável por traduzir nomes e enums canônicos para seus próprios códigos, usando mapper/adapter isolado em `Infrastructure/Providers`.
-
-Unit of Work só será usado se telemetria, feedback ou auditoria forem persistidos transacionalmente.
-
-## 10. Providers e catálogo
-
-O modelo nunca devolve IDs de catálogo. Ele usa nomes e enums canônicos. O objeto público `criteria` também é estritamente canônico e nunca expõe IDs ou códigos de provider.
-
-No estado atual, `VehicleSearchCriteria` contém códigos numéricos associados à Carzin, e o catálogo está fixado nesse provider. Evoluir esse contrato interno para `CanonicalVehicleSearchCriteria` (ou equivalente) aceito por `IVehicleCatalogReadService` é pré-requisito da feature. A feature de IA não deve perpetuar o acoplamento: nomes/enums permanecem canônicos na Application e são traduzidos para códigos Carzin somente dentro de `CarzinVehicleSearchCriteriaMapper`. Mesmo na primeira entrega com um único provider, IDs específicos permanecem internos. Novos providers só poderão ser habilitados para critérios catalogados quando possuírem mapper próprio.
-
-Antes de habilitar um segundo provider, a aplicação deverá garantir este fluxo:
-
-```text
-VehicleSearchIntent/criteria canônico
-  → adapter específico do provider, com tradução interna de IDs
-  → contrato de busca do provider
-```
-
-Nenhum código de Carzin será reutilizado como se fosse universal.
+Unit of Work só será usado se houver escrita transacional de feedback, auditoria ou catálogo.
 
 ## 11. Modelo e custo
 
-O baseline configurável será `gpt-4o-mini`, usando Structured Outputs e limite curto de saída. Não será enviado `reasoning_effort`, pois esse parâmetro não faz parte deste desenho. Após o piloto, produção deverá fixar um snapshot do modelo disponível, evitando alterações silenciosas de comportamento.
+O baseline configurável será `gpt-4o-mini`, usando Structured Outputs e limite curto de saída. Não será enviado `reasoning_effort`. Produção deverá fixar um snapshot disponível.
 
 Estimativa sem cache, assumindo 700 tokens de entrada e 120 de saída:
 
@@ -399,115 +521,208 @@ Estimativa sem cache, assumindo 700 tokens de entrada e 120 de saída:
 | 500 mil | US$ 88,50 |
 | 1 milhão | US$ 177,00 |
 
-O cálculo usa os preços atuais de US$ 0,15 por 1 milhão de tokens de entrada, US$ 0,075 por 1 milhão de tokens de entrada em cache e US$ 0,60 por 1 milhão de tokens de saída. A tabela é deliberadamente sem cache. Preços e consumo real deverão ser revalidados antes do rollout e medidos em produção.
+O cálculo usa os preços atuais de US$ 0,15 por 1 milhão de tokens de entrada, US$ 0,075 por 1 milhão de tokens de entrada em cache e US$ 0,60 por 1 milhão de tokens de saída. Preços e medição real devem ser revalidados antes do rollout.
 
-Modelos maiores ficam somente como alternativas e não serão fallback automático. Sua adoção dependerá de evals que demonstrem ganho material de precisão proporcional a custo e latência. Os valores não incluem retries, impostos, câmbio, processamento regional ou Priority.
+Modelos maiores só serão avaliados se evals demonstrarem ganho material de qualidade proporcional a custo e latência.
 
-## 12. Cache, segurança e observabilidade
+## 12. Cache
 
-### Cache
+Haverá três caches separados:
 
-- entrada estática do prompt/schema apta a prompt caching;
-- `inputFingerprint`, preferencialmente um HMAC com chave do servidor sobre prompt normalizado e locale, sem armazenar ou permitir reconstruir o texto bruto;
-- `systemPromptFingerprint`, calculado como hash do prompt de sistema, few-shots e configuração relevante à interpretação;
-- cache somente da intenção retornada pelo modelo e validada pelo backend, usando `inputFingerprint`, `systemPromptFingerprint`, snapshot do modelo e fingerprint do catálogo/schema/regras;
-- critérios temporais derivados não são armazenados nesse cache: `semi_new` é recalculado com `TimeProvider` e as regras vigentes a cada request;
-- TTL configurável;
-- nenhum prompt bruto em chave ou log;
-- cache existente de veículos reutilizado pelos critérios finais.
+### 12.1 Intenção validada
 
-### Segurança
+- chave com `inputFingerprint`, preferencialmente HMAC do prompt normalizado + locale;
+- inclui snapshot do modelo, `systemPromptFingerprint`, versão/fingerprint do registry de profiles e `dimensionRegistryFingerprint`;
+- armazena somente intenção validada;
+- não armazena critérios temporais derivados nem `searchUrl`;
+- `semi_new` e a URL são recalculados em todo POST.
 
-- prompt tratado como entrada não confiável;
-- schema fechado e allowlists;
-- sem ferramentas de HTTP, SQL ou escrita para o modelo;
-- limites numéricos e de tokens;
-- segredos apenas em configuração segura;
-- timeout, circuit breaker e retry somente para falhas transitórias;
-- rate limit por usuário/IP;
-- prompts brutos não registrados por padrão.
+`systemPromptFingerprint` é o hash do prompt de sistema, few-shots e configuração relevante à interpretação.
 
-### Observabilidade
+### 12.2 Catálogo bidirecional e revisionado
+
+- separado por provider, dimensão, hierarquia e revisão do sync;
+- suporta ProviderCode → nome para canonicalização legada;
+- suporta nome canônico → ProviderCode nos mappers dos providers;
+- invalida entradas quando a revisão do catálogo muda;
+- nunca compartilha códigos entre providers.
+
+### 12.3 Veículos por critérios canônicos
+
+- chave construída somente após `VehicleSearchRequest` virar `CanonicalVehicleSearchCriteria`;
+- requests por ID legado e nome equivalente convergem;
+- mantém isolamento e status por provider;
+- inclui a revisão de catálogo necessária à tradução.
+
+## 13. Segurança e erros
+
+- prompt é entrada não confiável;
+- Structured Outputs, enums fechados e allowlists;
+- o modelo não recebe ferramentas;
+- URL produzida apenas pelo builder determinístico;
+- nenhuma URL absoluta, fragment ou host;
+- limites de prompt, tokens, tempo e resultados;
+- segredos em configuração segura;
+- retry somente para falhas transitórias;
+- prompts brutos não são registrados por padrão;
+- erros de provider são sanitizados e identificam o provider;
+- `unsupportedCriteria` não expõe SQL, credenciais ou payload externo.
+
+Como o POST ecoa o prompt normalizado, o frontend deve inseri-lo como texto escapado. É proibido usar o valor em `innerHTML` ou equivalente; testes devem cobrir payloads XSS.
+
+## 14. Observabilidade
+
+### POST de IA
 
 - trace/correlation ID;
-- `inputFingerprint`, sem prompt bruto, e `systemPromptFingerprint`;
-- snapshot do modelo e fingerprint do catálogo/schema/regras;
-- tokens de entrada, cache e saída;
-- custo estimado;
-- latência por etapa;
-- status do modelo e de cada provider;
-- ordem mencionada, perfis `applied`/`partial`/`unsupported`, campos aplicados/pulados, winners e termos não resolvidos;
-- hit/miss de cache;
-- taxa de fallback e esclarecimento.
+- `inputFingerprint` e `systemPromptFingerprint`, sem prompt bruto;
+- snapshot, schema e versão do registry;
+- versão e fingerprint de `IVehicleSearchDimensionRegistry` usados pelo Handler, schema e URL builder;
+- tokens de entrada/cached input/saída e custo estimado;
+- latência do modelo, regras e URL builder;
+- cache hit/miss da intenção;
+- profiles `applied`/`partial`/`unsupported`;
+- warnings, status HTTP e taxa de `422`;
+- validação de que o POST não executou busca de veículos.
 
-## 13. Testes e evals
+### GET de veículos
 
-### Testes automatizados
+- origem da navegação, incluindo `aiSearch` apenas como contexto seguro do frontend/telemetria, não como critério;
+- modo de entrada canônico ou legado;
+- resultado da canonicalização e revisão do catálogo;
+- convergência/hit do cache canônico;
+- latência e status por provider;
+- `unsupportedCriteria` por provider;
+- falhas de hierarquia e ambiguidades.
 
-- contrato JSON estrito e propriedades extras rejeitadas;
-- valores ausentes como `null`;
-- normalização de nomes, acentos e locale;
-- precedência de critérios explícitos sobre perfis;
-- preservação da ordem da primeira menção e ausência de ordenação alfabética;
-- deduplicação preservando a primeira ocorrência;
-- validação backend dos códigos e cálculo de `mentionOrder` após normalização;
-- múltiplos perfis processados da esquerda para a direita;
-- conflitos parciais em que o profile posterior ainda preenche campos livres;
-- contradições explícitas;
-- `semi_new` calculado com `TimeProvider`;
-- hit de intenção em cache com `semi_new` recalculado em requests de datas diferentes;
-- `family` como `unsupported`, sem bloquear profiles posteriores e sem habilitação apenas por config;
-- `economic` não inferido a partir de combustível;
-- consistência do registry, geração do enum e validação de startup;
-- invalidação do cache quando `systemPromptFingerprint` ou o fingerprint do catálogo/schema/regras mudar, mantendo `inputFingerprint` estável para a mesma entrada;
-- miss/invalidação da entrada em cache quando prompt normalizado ou locale alterarem o `inputFingerprint`;
-- geração determinística e proteção do `inputFingerprint` por HMAC;
-- resolução de catálogo sem IDs inventados;
-- cancelamento, timeout e circuit breaker;
-- falha parcial de provider;
-- regressão do `GET /api/vehicles`.
+## 15. Testes e evals
 
-### Dataset de avaliação PT-BR
+### 15.1 POST e URL
 
-O conjunto dourado deve cobrir:
+- resposta contém obrigatoriamente `aiSearch: true`, prompt normalizado e `searchUrl`;
+- resposta não contém `criteria`, `vehicles` ou `providers`;
+- Handler do POST nunca chama `IVehicleCatalogReadService`;
+- Handler depende somente do output port `IVehicleSearchUrlBuilder`, sem tipos ASP.NET, e retorna a resposta completa;
+- Controller limita-se a `Ok(await mediator.Send(...))` e ao mapeamento de exceções;
+- allowlist, encoding, ordem estável e `InvariantCulture`;
+- valores `null` omitidos;
+- critérios explícitos de dimensões habilitadas nunca são omitidos;
+- dimensão desabilitada retorna `422` em vez de gerar URL infiel;
+- ausência de host, scheme, fragment e IDs de provider;
+- somente parâmetros `*_name` para os catálogos;
+- schema e allowlist são derivados do mesmo `IVehicleSearchDimensionRegistry`;
+- alteração da versão/fingerprint do registry invalida o cache de intenção;
+- startup falha se schema, validação e allowlist divergirem do registry;
+- POST valida pais estruturais, mas não existência, combinação ou ambiguidade de catálogo;
+- URL sintaticamente válida pode ser rejeitada autoritativamente no GET;
+- `family`/`economic` sozinhos retornam `422`;
+- profile unsupported junto de intenção aplicável ainda produz URL e warning;
+- `rulesVersion` presente em toda resolução de profile;
+- `unresolvedTerms` vira warning apenas quando a URL restante é fiel;
+- prompt ecoado não causa XSS;
+- falhas do modelo mapeadas para `502`, `503` e `504` e rate limit para `429`.
 
-- “carro para família”, “para levar as crianças”, “carro familiar”;
-- “seminovo”, “pouco rodado”, “quase novo”;
-- “primeiro carro”, “sou recém-habilitado”, “para iniciante”;
-- “econômico”, “gasta pouco”, “barato de manter”;
-- filtros explícitos que contradizem defaults do perfil;
-- múltiplos perfis em ordens distintas, repetidos e com conflitos parciais;
-- “seminovo para família e para iniciante”, validando `semi_new`, `family`, `beginner` nessa ordem e a continuidade após `family` unsupported;
-- valores monetários, anos, cidades e estados;
-- erros ortográficos;
-- prompts vagos, fora do domínio e prompt injection.
+### 15.2 GET e canonicalização
+
+- binding de todos os novos parâmetros canônicos;
+- compatibilidade dos parâmetros numéricos atuais;
+- canônico + numérico do mesmo campo retorna `400`;
+- canonicalizer genérico delega somente IDs legados a `ILegacyVehicleSearchCriteriaAdapter`;
+- `CarzinLegacyVehicleSearchCriteriaAdapter` resolve ProviderCode para nome canônico;
+- request por ID e por nome converge para a mesma chave de cache;
+- parent obrigatório nas duas hierarquias;
+- matching exato normalizado para case, acento e whitespace;
+- parent estrutural ausente retorna `422` antes da busca;
+- existência, combinação e ambiguidade são decididas no GET/provider;
+- fuzzy nunca escolhe silenciosamente.
+
+### 15.3 Providers e catálogo
+
+- cada provider traduz nomes para seus próprios códigos;
+- códigos Carzin não vazam além da exceção transitória `VehicleSearchRequest` nem alcançam Query canônica, resposta ou URL;
+- manufacturer/model/version usam a hierarquia correta;
+- city é resolvida dentro de state;
+- migrations e sync de city/color/gear/fuel;
+- catálogo ausente ou filtro não suportado gera falha parcial com `unsupportedCriteria`;
+- mapper rejeita antes da chamada externa, com `Success = false` e zero veículos;
+- contrato completo de `ProviderStatusResponse`, incluindo `unsupportedCriteria`;
+- GET retorna `200` com ao menos um provider bem-sucedido;
+- GET retorna `422` quando todos rejeitam critérios e `503` quando todos os que aceitaram falham por indisponibilidade;
+- nenhum filtro é omitido silenciosamente;
+- falha parcial de um provider não bloqueia os demais.
+
+### 15.4 Cache e regras
+
+- cache de intenção guarda somente saída validada;
+- `semi_new` é recalculado após cache hit;
+- `searchUrl` nunca é cacheada;
+- invalidação por `systemPromptFingerprint`, registry de profiles, `dimensionRegistryFingerprint` e revisão de catálogo;
+- `inputFingerprint` muda com prompt/locale e não revela o prompt;
+- ordem, dedup, `mentionOrder`, winner e proveniência dos profiles;
+- profile posterior preenche campos livres;
+- pipeline continua após profile unsupported.
+
+### 15.5 Evals PT-BR
+
+O dataset dourado cobre filtros explícitos, múltiplos profiles, valores monetários, anos, cidades/estados, erros ortográficos, prompts vagos, fora do domínio e prompt injection.
 
 Métricas:
 
-- acerto por campo;
-- acerto de classificação de perfil;
-- exact match da sequência ordenada de profiles;
-- acerto da deduplicação e de `mentionOrder` normalizado;
-- acerto de winner e proveniência por campo;
-- taxa de profiles posteriores que preenchem corretamente campos livres após conflitos;
-- continuidade correta do pipeline após profile `unsupported`;
+- acerto por campo canônico;
+- exact match da sequência de profiles;
+- dedup e `mentionOrder`;
+- winner/proveniência por campo;
 - zero violação de critérios explícitos;
-- taxas de profiles `unsupported` e `partial`;
-- taxa de esclarecimento e fallback;
-- p50/p95 de latência;
-- tokens e custo por busca.
+- profiles posteriores preenchendo campos livres;
+- continuidade após unsupported;
+- taxas de `unsupported`, `partial` e `422`;
+- p50/p95 da tradução e do GET separadamente;
+- tokens, custo e taxa de cache.
 
-## 14. Rollout
+## 16. Gate de capacidades — go/no-go
 
-1. Criar dataset e baseline com `gpt-4o-mini`.
-2. Implementar registry, validação de startup e geração do schema sob feature flag.
-3. Executar piloto interno com snapshot, `inputFingerprint`, `systemPromptFingerprint` e fingerprint do catálogo/schema/regras observáveis e versionados quando aplicável.
-4. Medir precisão, custo real, latência, ordem dos profiles e cache.
-5. Liberar canário com quota.
-6. Aumentar tráfego gradualmente.
-7. Avaliar modelos maiores somente se o baseline não atingir a qualidade definida nos evals.
+Antes de expor a feature ou habilitar cada dimensão, o time deve registrar uma decisão explícita de go/no-go para city, color, gear e fuel. O gate exige, por dimensão:
 
-## 15. Referências
+- endpoint externo e método de autenticação confirmados;
+- contrato real capturado e mapeamento revisado;
+- path externo configurado por ambiente;
+- entidade de Domain, configuração EF e migration disponíveis;
+- seed/sync executado com revisão de catálogo observável;
+- mapper Carzin nome → ProviderCode validado;
+- adapter legado ProviderCode → nome, se existir parâmetro numérico correspondente;
+- testes de hierarquia, ambiguidade, indisponibilidade e cache;
+- capacidade declarada no registry e no provider.
+
+Manufacturer, model e version são as dimensões catalogadas atualmente habilitadas. Enquanto city, color, gear ou fuel não passarem pelo gate, elas ficam ausentes/desabilitadas no schema gerado do modelo e na allowlist gerada do URL builder. Um pedido que dependa de uma dimensão desabilitada retorna `422`. Ele só pode virar warning em `unresolvedTerms` quando os demais critérios preservarem fielmente a intenção, sem remover silenciosamente uma restrição essencial.
+
+## 17. Rollout
+
+1. Evoluir `VehicleSearchRequest`, `CanonicalVehicleSearchCriteria`, `IVehicleCatalogReadService` e `IVehicleProvider`.
+2. Manter o GET compatível com parâmetros numéricos e validar conflito com `*_name`.
+3. Executar e aprovar o gate go/no-go de city, color, gear e fuel antes de habilitar cada filtro.
+4. Implementar caches bidirecionais/revisionados e provar convergência legado/canônico.
+5. Adaptar Carzin e demais providers para tradução interna nome → ProviderCode.
+6. Implementar o POST tradutor e o URL builder sob feature flag.
+7. Integrar o frontend com os dois roundtrips e renderização segura do prompt.
+8. Executar piloto interno com snapshot, `systemPromptFingerprint`, registry de profiles e `dimensionRegistryFingerprint` observáveis.
+9. Liberar canário, medir precisão, custo, latência do POST e GET e `unsupportedCriteria`.
+10. Ampliar tráfego gradualmente; remover parâmetros numéricos somente após telemetria comprovar que não há consumidores.
+
+## 18. Critérios de conclusão
+
+- POST traduz prompt em URL relativa sem consultar veículos;
+- GET executa toda busca por critérios canônicos;
+- contratos HTTP e internos não expõem IDs de provider no caminho da IA;
+- compatibilidade legada e conflitos estão testados;
+- providers não omitem filtros silenciosamente;
+- migrations e sync necessários estão disponíveis;
+- decisão go/no-go e capacidades habilitadas estão registradas;
+- `AGENTS.md` reconhece as extensões `Application/Rules` e `Api/Routing`;
+- arquitetura CQRS/MediatR e separação de camadas preservadas;
+- build, testes automatizados e evals do baseline passam;
+- feature flag, métricas e rollback estão definidos.
+
+## 19. Referências
 
 - Structured Outputs: https://developers.openai.com/api/docs/guides/structured-outputs
 - SDK oficial para .NET: https://developers.openai.com/api/docs/quickstart
