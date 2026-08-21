@@ -3,17 +3,19 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buscarro.Domain", "Buscarro.Domain\Buscarro.Domain.csproj", "{A170DC69-6A40-4C5D-A4EA-3006C242A806}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buscarro.Domain", "src\Buscarro.Domain\Buscarro.Domain.csproj", "{A170DC69-6A40-4C5D-A4EA-3006C242A806}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buscarro.Application", "Buscarro.Application\Buscarro.Application.csproj", "{99F2D1D4-E3D4-48F6-BE90-C4C61076540E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buscarro.Application", "src\Buscarro.Application\Buscarro.Application.csproj", "{99F2D1D4-E3D4-48F6-BE90-C4C61076540E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buscarro.Infrastructure", "Buscarro.Infrastructure\Buscarro.Infrastructure.csproj", "{AEF0CA50-5864-439D-85A6-DF08A8859F6D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buscarro.Infrastructure", "src\Buscarro.Infrastructure\Buscarro.Infrastructure.csproj", "{AEF0CA50-5864-439D-85A6-DF08A8859F6D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buscarro.Api", "Buscarro.Api\Buscarro.Api.csproj", "{5A8A7A05-C0CA-43E7-8F36-BE37517C5108}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buscarro.Api", "src\Buscarro.Api\Buscarro.Api.csproj", "{5A8A7A05-C0CA-43E7-8F36-BE37517C5108}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buscarro.Tests", "Buscarro.Tests\Buscarro.Tests.csproj", "{3674942B-7E17-4BAA-A48D-920E0D624E38}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buscarro.Tests", "tests\Buscarro.Tests\Buscarro.Tests.csproj", "{3674942B-7E17-4BAA-A48D-920E0D624E38}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buscarro.CarzinSeedSync", "Buscarro.CarzinSeedSync\Buscarro.CarzinSeedSync.csproj", "{7E2BE514-5888-42B5-A14D-253D992094FE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buscarro.CarzinSeedSync", "src\Buscarro.CarzinSeedSync\Buscarro.CarzinSeedSync.csproj", "{7E2BE514-5888-42B5-A14D-253D992094FE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Buscarro.CatalogSync.Worker", "src\Buscarro.CatalogSync.Worker\Buscarro.CatalogSync.Worker.csproj", "{84101D2A-9888-4E26-A54F-90C67B5E4121}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -97,6 +99,18 @@ Global
 		{7E2BE514-5888-42B5-A14D-253D992094FE}.Release|x64.Build.0 = Release|Any CPU
 		{7E2BE514-5888-42B5-A14D-253D992094FE}.Release|x86.ActiveCfg = Release|Any CPU
 		{7E2BE514-5888-42B5-A14D-253D992094FE}.Release|x86.Build.0 = Release|Any CPU
+		{84101D2A-9888-4E26-A54F-90C67B5E4121}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{84101D2A-9888-4E26-A54F-90C67B5E4121}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{84101D2A-9888-4E26-A54F-90C67B5E4121}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{84101D2A-9888-4E26-A54F-90C67B5E4121}.Debug|x64.Build.0 = Debug|Any CPU
+		{84101D2A-9888-4E26-A54F-90C67B5E4121}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{84101D2A-9888-4E26-A54F-90C67B5E4121}.Debug|x86.Build.0 = Debug|Any CPU
+		{84101D2A-9888-4E26-A54F-90C67B5E4121}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{84101D2A-9888-4E26-A54F-90C67B5E4121}.Release|Any CPU.Build.0 = Release|Any CPU
+		{84101D2A-9888-4E26-A54F-90C67B5E4121}.Release|x64.ActiveCfg = Release|Any CPU
+		{84101D2A-9888-4E26-A54F-90C67B5E4121}.Release|x64.Build.0 = Release|Any CPU
+		{84101D2A-9888-4E26-A54F-90C67B5E4121}.Release|x86.ActiveCfg = Release|Any CPU
+		{84101D2A-9888-4E26-A54F-90C67B5E4121}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

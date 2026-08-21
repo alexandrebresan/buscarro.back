@@ -6,9 +6,9 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build Buscarro.Api",
-      "program": "${workspaceFolder}/Buscarro.Api/bin/Debug/net9.0/Buscarro.Api.dll",
+      "program": "${workspaceFolder}/src/Buscarro.Api/bin/Debug/net9.0/Buscarro.Api.dll",
       "args": [],
-      "cwd": "${workspaceFolder}/Buscarro.Api",
+      "cwd": "${workspaceFolder}/src/Buscarro.Api",
       "stopAtEntry": false,
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development",
@@ -20,9 +20,9 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build Buscarro.Api",
-      "program": "${workspaceFolder}/Buscarro.Api/bin/Debug/net9.0/Buscarro.Api.dll",
+      "program": "${workspaceFolder}/src/Buscarro.Api/bin/Debug/net9.0/Buscarro.Api.dll",
       "args": [],
-      "cwd": "${workspaceFolder}/Buscarro.Api",
+      "cwd": "${workspaceFolder}/src/Buscarro.Api",
       "stopAtEntry": false,
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development",
