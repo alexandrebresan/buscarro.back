@@ -55,4 +55,13 @@ public sealed class VersionedCatalogDependencyInjectionTests
         using var scope = provider.CreateScope();
         Assert.All(serviceTypes, serviceType => Assert.NotNull(scope.ServiceProvider.GetService(serviceType)));
     }
+
+    [Fact]
+    public void AutoDev_catalog_normalizer_is_scoped()
+    {
+        var services = new ServiceCollection();
+        services.AddAutoDevCatalogNormalization();
+        Assert.Equal(ServiceLifetime.Scoped,
+            services.Single(value => value.ServiceType == typeof(IVehicleCatalogItemNormalizer)).Lifetime);
+    }
 }

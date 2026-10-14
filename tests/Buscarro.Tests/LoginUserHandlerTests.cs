@@ -1,109 +1,39 @@
 using Buscarro.Application.Commands;
-using Buscarro.Application.DTOs;
 using Buscarro.Application.Exceptions;
 using Buscarro.Application.Handlers;
 using Buscarro.Application.Interfaces;
+using Buscarro.Application.DTOs;
+using Buscarro.Application.Services;
 using Buscarro.Domain.Entities;
-using Buscarro.Domain.Interfaces;
-
+using Buscarro.Infrastructure.Repositories;
+using Buscarro.Infrastructure.Services;
+using Microsoft.EntityFrameworkCore;
 namespace Buscarro.Tests;
-
 public sealed class LoginUserHandlerTests
 {
     [Fact]
-    public async Task Handle_returns_user_when_email_and_password_match()
+    public async Task Login_and_registration_issue_persisted_sessions_with_hashed_refresh_tokens()
     {
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Name = "Alex",
-            Email = "alex@example.com",
-            PasswordHash = "hashed-secret"
-        };
-        var handler = new LoginUserHandler(
-            new FakeUserRepository(user),
-            new FakePasswordHasherService(),
-            new FakeJwtTokenService());
-
-        var response = await handler.Handle(
-            new LoginUserCommand("ALEX@EXAMPLE.COM", "secret"),
-            CancellationToken.None);
-
-        Assert.Equal(user.Id, response.User.Id);
-        Assert.Equal("Alex", response.User.Name);
-        Assert.Equal("alex@example.com", response.User.Email);
-        Assert.Equal("jwt-token", response.Token);
-        Assert.Equal("Bearer", response.TokenType);
-        Assert.Equal(FakeJwtTokenService.ExpiresAtUtc, response.ExpiresAtUtc);
+        using var db = AuthSessionCoreTests.CreateDb();
+        var users = new UserRepository(db);
+        var auth = new AuthSessionRepository(db);
+        var uow = new Buscarro.Infrastructure.UnitOfWork.UnitOfWork(db);
+        var generator = new RefreshTokenGenerator();
+        var hasher = new PasswordHasherService();
+        var issuer = new SessionIssuer(auth, new Jwt(), generator, TimeProvider.System);
+        var register = new RegisterUserHandler(users, auth, hasher, uow, issuer);
+        var registered = await register.Handle(new("Alex", "ALEX@EXAMPLE.COM", "secret"), default);
+        Assert.Equal("alex@example.com", registered.Response.User.Email);
+        Assert.NotEqual("secret", (await db.Users.SingleAsync()).PasswordHash);
+        var login = new LoginUserHandler(users, auth, hasher, uow, issuer);
+        var loggedIn = await login.Handle(new("ALEX@EXAMPLE.COM", "secret"), default);
+        Assert.Equal(registered.Response.User.Id, loggedIn.Response.User.Id);
+        Assert.Equal(2, await db.UserSessions.CountAsync());
+        Assert.Contains(await db.RefreshTokens.ToListAsync(), t => t.TokenHash == generator.Hash(loggedIn.RefreshToken));
+        await Assert.ThrowsAsync<AuthenticationFailedException>(() => login.Handle(new("alex@example.com", "wrong"), default));
     }
-
-    [Fact]
-    public async Task Handle_rejects_invalid_password()
+    private sealed class Jwt : IJwtTokenService
     {
-        var user = new User
-        {
-            Email = "alex@example.com",
-            PasswordHash = "hashed-secret"
-        };
-        var handler = new LoginUserHandler(
-            new FakeUserRepository(user),
-            new FakePasswordHasherService(),
-            new FakeJwtTokenService());
-
-        await Assert.ThrowsAsync<AuthenticationFailedException>(() =>
-            handler.Handle(new LoginUserCommand("alex@example.com", "wrong"), CancellationToken.None));
-    }
-
-    private sealed class FakeUserRepository : IUserRepository
-    {
-        private readonly User? _user;
-
-        public FakeUserRepository(User? user)
-        {
-            _user = user;
-        }
-
-        public Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
-        {
-            return Task.FromResult<User?>(null);
-        }
-
-        public Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(_user?.Email == email ? _user : null);
-        }
-
-        public Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(false);
-        }
-
-        public Task AddAsync(User user, CancellationToken cancellationToken)
-        {
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class FakePasswordHasherService : IPasswordHasherService
-    {
-        public string HashPassword(User user, string password)
-        {
-            return $"hashed-{password}";
-        }
-
-        public bool VerifyPassword(User user, string password)
-        {
-            return user.PasswordHash == $"hashed-{password}";
-        }
-    }
-
-    private sealed class FakeJwtTokenService : IJwtTokenService
-    {
-        public static readonly DateTime ExpiresAtUtc = new(2026, 5, 18, 12, 0, 0, DateTimeKind.Utc);
-
-        public JwtTokenResponse CreateToken(User user)
-        {
-            return new JwtTokenResponse("jwt-token", "Bearer", ExpiresAtUtc);
-        }
+        public JwtTokenResponse CreateToken(User user, UserSession session) => new("jwt-token", "Bearer", DateTime.UtcNow.AddMinutes(15));
     }
 }

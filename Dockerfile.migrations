@@ -1,0 +1,11 @@
+ARG POSTGRES_IMAGE=postgres:17.9-bookworm
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+COPY . .
+RUN dotnet tool install --tool-path /tools dotnet-ef --version 9.0.11
+# Model construction only: no database or authentication/provider credentials.
+RUN ConnectionStrings__BuscarroDb="Host=localhost;Database=design_time;Username=design_time;Password=design_time" /tools/dotnet-ef migrations script --idempotent --project src/Buscarro.Infrastructure/Buscarro.Infrastructure.csproj --startup-project src/Buscarro.Api/Buscarro.Api.csproj --configuration Release --output /migrations.sql
+FROM ${POSTGRES_IMAGE}
+COPY --from=build /migrations.sql /migrations.sql
+COPY deploy/aws/scripts/migrate.sh /usr/local/bin/buscarro-migrate
+ENTRYPOINT ["bash", "/usr/local/bin/buscarro-migrate"]

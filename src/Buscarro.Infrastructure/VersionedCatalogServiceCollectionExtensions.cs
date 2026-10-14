@@ -17,6 +17,12 @@ public static class VersionedCatalogServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddAutoDevCatalogNormalization(this IServiceCollection services)
+    {
+        services.AddScoped<IVehicleCatalogItemNormalizer, AutoDevVehicleCatalogItemNormalizer>();
+        return services;
+    }
+
     public static IServiceCollection AddVersionedCatalogPersistence(this IServiceCollection services)
     {
         services.AddScoped<IUnitOfWork, Buscarro.Infrastructure.UnitOfWork.UnitOfWork>();

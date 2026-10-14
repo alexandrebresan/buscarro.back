@@ -3,6 +3,8 @@ using Buscarro.Application.Commands;
 using Buscarro.Application.DTOs;
 using Buscarro.Application.Handlers;
 using Buscarro.Application.Interfaces;
+using Buscarro.Application.Queries;
+using Buscarro.Infrastructure.Providers;
 using Buscarro.Infrastructure.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -18,7 +20,7 @@ public sealed class ApiHostCompositionTests
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            EnvironmentName = "Production",
+            EnvironmentName = "Development",
             ApplicationName = typeof(ApiHostComposition).Assembly.GetName().Name
         });
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
@@ -27,6 +29,7 @@ public sealed class ApiHostCompositionTests
             ["Jwt:Issuer"] = "test",
             ["Jwt:Audience"] = "test",
             ["Jwt:Secret"] = "a-test-secret-with-at-least-32-bytes",
+            ["Auth:AllowedOrigins:0"] = "https://buscarro.test",
             ["OpenAI:BaseUrl"] = "https://api.openai.test/",
             ["OpenAI:Model"] = "test-model"
         });
@@ -52,5 +55,8 @@ public sealed class ApiHostCompositionTests
             descriptor => forbiddenNames.Any(name =>
                 (descriptor.ServiceType.FullName?.Contains(name, StringComparison.Ordinal) ?? false) ||
                 (descriptor.ImplementationType?.FullName?.Contains(name, StringComparison.Ordinal) ?? false)));
+        Assert.DoesNotContain(builder.Services, descriptor => descriptor.ServiceType == typeof(IRequestHandler<GetProviderSynchronizationDueQuery, bool>));
+        Assert.DoesNotContain(builder.Services, descriptor => descriptor.ServiceType == typeof(IVehicleCatalogSource) ||
+            descriptor.ServiceType == typeof(IVehicleCatalogItemNormalizer) || descriptor.ImplementationType == typeof(AutoDevCatalogSource));
     }
 }

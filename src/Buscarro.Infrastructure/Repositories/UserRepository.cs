@@ -22,14 +22,18 @@ public sealed class UserRepository : IUserRepository
 
     public Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken)
     {
-        return _dbContext.Users
-            .FirstOrDefaultAsync(user => user.Email == email, cancellationToken);
+        var normalized = email.Trim().ToLowerInvariant();
+        return _dbContext.Database.IsNpgsql()
+            ? _dbContext.Users.FirstOrDefaultAsync(user => EF.Property<string>(user, "NormalizedEmail") == normalized, cancellationToken)
+            : _dbContext.Users.FirstOrDefaultAsync(user => user.Email.Trim().ToLower() == normalized, cancellationToken);
     }
 
     public Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken)
     {
-        return _dbContext.Users
-            .AnyAsync(user => user.Email == email, cancellationToken);
+        var normalized = email.Trim().ToLowerInvariant();
+        return _dbContext.Database.IsNpgsql()
+            ? _dbContext.Users.AnyAsync(user => EF.Property<string>(user, "NormalizedEmail") == normalized, cancellationToken)
+            : _dbContext.Users.AnyAsync(user => user.Email.Trim().ToLower() == normalized, cancellationToken);
     }
 
     public async Task AddAsync(User user, CancellationToken cancellationToken)

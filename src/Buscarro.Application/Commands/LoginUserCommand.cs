@@ -5,4 +5,4 @@ namespace Buscarro.Application.Commands;
 
 public sealed record LoginUserCommand(
     string Email,
-    string Password) : IRequest<AuthResponse>;
+    string Password) : IRequest<SessionResult>;

@@ -1,5 +1,6 @@
 using Buscarro.Application.Commands;
 using Buscarro.Application.DTOs;
+using Buscarro.Application.Queries;
 using MediatR;
 using Microsoft.Extensions.Options;
 
@@ -22,7 +23,13 @@ public sealed class CatalogSynchronizationWorker(
                 try
                 {
                     await using var scope = scopeFactory.CreateAsyncScope();
-                    var result = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new SynchronizeProviderCatalogCommand(provider), stoppingToken);
+                    var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+                    if (!await sender.Send(new GetProviderSynchronizationDueQuery(provider, options.Value.GetSynchronizationInterval(provider)), stoppingToken))
+                    {
+                        logger.LogInformation("Catalog synchronization is not due for provider {Provider}.", provider);
+                        continue;
+                    }
+                    var result = await sender.Send(new SynchronizeProviderCatalogCommand(provider), stoppingToken);
                     var completedAt = timeProvider.GetUtcNow();
                     RecordResult(provider, result, completedAt, health, logger);
                 }

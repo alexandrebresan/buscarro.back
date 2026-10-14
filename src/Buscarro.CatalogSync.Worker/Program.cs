@@ -39,6 +39,13 @@ builder.Services.AddSingleton(services => services.GetRequiredService<IOptions<C
 builder.Services.AddOptions<CarzinCatalogSourceOptions>().Bind(builder.Configuration.GetSection("CarzinCatalogSource"))
     .Validate(value => value.IsValidForWorker(), "CarzinCatalogSource requires exactly three retries and valid delay/circuit settings.").ValidateOnStart();
 builder.Services.AddSingleton(services => services.GetRequiredService<IOptions<CarzinCatalogSourceOptions>>().Value);
+builder.Services.AddOptions<AutoDevOptions>().Bind(builder.Configuration.GetSection("AutoDev"))
+    .Validate(value => Uri.TryCreate(value.BaseUrl, UriKind.Absolute, out _) && !string.IsNullOrWhiteSpace(value.ApiKey), "AutoDev BaseUrl and ApiKey are required.").ValidateOnStart();
+builder.Services.AddOptions<AutoDevCatalogSourceOptions>().Bind(builder.Configuration.GetSection("AutoDevCatalogSource"))
+    .Validate(value => value.IsValidForWorker(), "AutoDevCatalogSource requires the approved limits.").ValidateOnStart();
+builder.Services.AddSingleton(services => services.GetRequiredService<IOptions<AutoDevCatalogSourceOptions>>().Value);
+builder.Services.AddOptions<CurrencyConversionOptions>().Bind(builder.Configuration.GetSection("CurrencyConversion"))
+    .Validate(value => value.IsValidForWorker(), "CurrencyConversion requires the approved USD/BRL PTAX configuration.").ValidateOnStart();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<CatalogSyncHealthState>();
 builder.Services.AddSingleton<CarzinCircuitBreaker>();
@@ -48,8 +55,9 @@ builder.Services.AddDbContext<BuscarroDbContext>(options => options.UseNpgsql(co
 builder.Services.AddDbContextFactory<BuscarroDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddVersionedCatalogPersistence();
 builder.Services.AddCarzinCatalogNormalization();
+builder.Services.AddAutoDevCatalogNormalization();
 builder.Services.AddMediatR(config => config.RegisterServicesFromAssembly(typeof(FindAllVehiclesQuery).Assembly));
-var workerHandlers = new HashSet<Type> { typeof(SynchronizeProviderCatalogHandler), typeof(CleanupCatalogHandler),typeof(RollbackCatalogHandler) };
+var workerHandlers = new HashSet<Type> { typeof(SynchronizeProviderCatalogHandler), typeof(GetProviderSynchronizationDueHandler), typeof(CleanupCatalogHandler),typeof(RollbackCatalogHandler) };
 for (var index = builder.Services.Count - 1; index >= 0; index--)
 {
     var descriptor = builder.Services[index];
@@ -65,6 +73,13 @@ builder.Services.AddScoped<ICatalogGenerationFailureRecorder, CatalogGenerationF
 builder.Services.AddHttpClient<CarzinCatalogSource>((services, client) =>
     client.BaseAddress = new Uri(services.GetRequiredService<IOptions<CarzinOptions>>().Value.BaseUrl));
 builder.Services.AddScoped<IVehicleCatalogSource>(services => services.GetRequiredService<CarzinCatalogSource>());
+builder.Services.AddScoped<IAutoDevRequestPacer, AutoDevRequestPacer>();
+builder.Services.AddHttpClient<AutoDevCatalogSource>((services, client) =>
+    client.BaseAddress = new Uri(services.GetRequiredService<IOptions<AutoDevOptions>>().Value.BaseUrl));
+builder.Services.AddScoped<IVehicleCatalogSource>(services => services.GetRequiredService<AutoDevCatalogSource>());
+builder.Services.AddHttpClient<BcbPtaxExchangeRateProvider>((services, client) =>
+    client.BaseAddress = new Uri(services.GetRequiredService<IOptions<CurrencyConversionOptions>>().Value.BaseUrl));
+builder.Services.AddScoped<IExchangeRateProvider>(services => services.GetRequiredService<BcbPtaxExchangeRateProvider>());
 if(rollbackArguments is null)
 {
     builder.Services.AddHostedService<CatalogSynchronizationWorker>();

@@ -251,6 +251,18 @@ public sealed class SynchronizeProviderCatalogHandlerTests
     }
 
     [Fact]
+    public async Task Has_next_false_cannot_mask_known_remaining_total_pages()
+    {
+        var fixture = new Fixture(pageSize: 1);
+        fixture.Source.Pages.Enqueue(new(1, 1, 1, 2, null, [Vehicle("1", "A")], false));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Handler.Handle(new("Carzin"), TestContext.Current.CancellationToken));
+
+        Assert.Equal("catalog_has_next_missing_before_final", exception.Message);
+        Assert.Equal(1, fixture.FailureRecorder.Calls);
+    }
+
+    [Fact]
     public async Task Empty_page_terminates_sequence_after_a_full_page()
     {
         var fixture = new Fixture(pageSize: 1);

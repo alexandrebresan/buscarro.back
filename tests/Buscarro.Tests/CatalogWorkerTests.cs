@@ -4,11 +4,32 @@ using Buscarro.Application.DTOs;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using MediatR;
+using Buscarro.Application.Queries;
+using Buscarro.Application.Commands;
+using System.Reflection;
+using Microsoft.Extensions.Configuration;
 
 namespace Buscarro.Tests;
 
 public sealed class CatalogWorkerTests
 {
+    [Fact]
+    public void Versioned_worker_appsettings_bind_to_valid_provider_intervals()
+    {
+        var repository = FindRepositoryRoot();
+        var configuration = new ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(repository, "src", "Buscarro.CatalogSync.Worker", "appsettings.json"), optional: false)
+            .Build();
+        var options = configuration.GetSection(CatalogWorkerOptions.SectionName).Get<CatalogWorkerOptions>();
+
+        Assert.NotNull(options);
+        Assert.Equal(["Carzin", "AutoDev"], options.Providers);
+        Assert.Equal(TimeSpan.FromDays(1), options.SynchronizationInterval);
+        Assert.Equal(TimeSpan.FromDays(2), options.GetSynchronizationInterval("AutoDev"));
+        Assert.True(options.IsValid());
+    }
     [Fact]
     public void Health_preserves_last_success_and_failure_independently()
     {
@@ -84,5 +105,56 @@ public sealed class CatalogWorkerTests
             ReadyRetention = TimeSpan.FromDays(1), FailedRetention = TimeSpan.FromDays(7)
         });
         Assert.Equal(now.AddHours(-2).AddMinutes(-15), command.AbandonedBeforeUtc);
+    }
+
+    [Fact]
+    public async Task Not_due_provider_does_not_send_sync_command_or_mutate_health()
+    {
+        using var stopping = new CancellationTokenSource();
+        var sender = new NotDueSender(stopping);
+        using var provider = new ServiceCollection().AddSingleton<ISender>(sender).BuildServiceProvider();
+        var health = new CatalogSyncHealthState();
+        var worker = new CatalogSynchronizationWorker(provider.GetRequiredService<IServiceScopeFactory>(),
+            Options.Create(new CatalogWorkerOptions { Providers = ["AutoDev"], InitialDelay = TimeSpan.Zero, SynchronizationInterval = TimeSpan.FromDays(1) }),
+            health, TimeProvider.System, NullLogger<CatalogSynchronizationWorker>.Instance);
+        var execute = typeof(CatalogSynchronizationWorker).GetMethod("ExecuteAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var task = (Task)execute.Invoke(worker, [stopping.Token])!;
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
+        Assert.False(sender.SyncSent); Assert.Empty(health.Providers);
+    }
+
+    [Fact]
+    public void Provider_intervals_override_only_the_named_provider()
+    {
+        var options = new CatalogWorkerOptions
+        {
+            Providers = ["Carzin", "AutoDev"], SynchronizationInterval = TimeSpan.FromDays(1),
+            ProviderSynchronizationIntervals = new() { ["AutoDev"] = TimeSpan.FromDays(2) }
+        };
+        Assert.True(options.IsValid());
+        Assert.Equal(TimeSpan.FromDays(1), options.GetSynchronizationInterval("carzin"));
+        Assert.Equal(TimeSpan.FromDays(2), options.GetSynchronizationInterval("AUTODEV"));
+    }
+
+    private sealed class NotDueSender(CancellationTokenSource stopping) : ISender
+    {
+        public bool SyncSent { get; private set; }
+        public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+        {
+            if (request is GetProviderSynchronizationDueQuery) { stopping.Cancel(); return Task.FromResult((TResponse)(object)false); }
+            if (request is SynchronizeProviderCatalogCommand) SyncSent = true;
+            throw new Xunit.Sdk.XunitException("Unexpected request.");
+        }
+        public Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default) where TRequest : IRequest => throw new Xunit.Sdk.XunitException("Unexpected request.");
+        public IAsyncEnumerable<TResponse> CreateStream<TResponse>(IStreamRequest<TResponse> request, CancellationToken cancellationToken = default) => throw new Xunit.Sdk.XunitException("Unexpected request.");
+        public IAsyncEnumerable<object?> CreateStream(object request, CancellationToken cancellationToken = default) => throw new Xunit.Sdk.XunitException("Unexpected request.");
+        public Task<object?> Send(object request, CancellationToken cancellationToken = default) => throw new Xunit.Sdk.XunitException("Unexpected request.");
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Buscarro.sln"))) directory = directory.Parent;
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not locate repository root.");
     }
 }

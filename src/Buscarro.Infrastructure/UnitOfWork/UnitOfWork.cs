@@ -1,4 +1,6 @@
 using Buscarro.Domain.Interfaces;
+using Buscarro.Application.Exceptions;
+using Npgsql;
 using Buscarro.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -47,6 +49,13 @@ public sealed class UnitOfWork : IUnitOfWork
             return;
         }
 
-        await _transactionalExecutor.ExecuteAsync(operation, cancellationToken);
+        try
+        {
+            await _transactionalExecutor.ExecuteAsync(operation, cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            throw new UniqueConstraintException(ex);
+        }
     }
 }

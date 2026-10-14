@@ -73,3 +73,31 @@ nunit-*.xml
 # OS files
 .DS_Store
 Thumbs.db
+
+# AWS runtime files and private keys (examples remain tracked)
+deploy/aws/.env
+deploy/aws/*.env
+deploy/aws/certificates/
+deploy/aws/backups/
+**/*.pfx
+**/*.p12
+**/*.pem
+**/*.key
+
+# Local exports and generated SQL; keep these files outside releases
+/output/
+/catalog-update.sql
+
+# Local environment and development overrides (tracked templates remain visible)
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.env
+!*.env.example
+**/appsettings.Development.json
+**/appsettings.local.json
+**/appsettings.*.local.json
+
+# Detailed working guides stay local; README is public documentation
+/docs/*.md

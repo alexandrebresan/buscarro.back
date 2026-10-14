@@ -16,6 +16,7 @@ ApiHostComposition.ConfigureServices(builder);
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseMiddleware<ApiExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
@@ -49,7 +50,6 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseSession();
 app.UseCors(ApiHostComposition.CorsPolicyName);
 app.UseAuthentication();
 app.UseAuthorization();

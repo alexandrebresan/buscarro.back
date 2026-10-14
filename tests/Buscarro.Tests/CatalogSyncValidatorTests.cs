@@ -19,8 +19,33 @@ public sealed class CatalogSyncValidatorTests
         Assert.True(result.IsValid);
         Assert.Equal("Honda Civic", result.Vehicle!.Title);
         Assert.Equal("honda civic", CatalogSyncValidator.Normalize(result.Vehicle.Title));
-        Assert.Null(result.Vehicle.ImageUrl);
+        Assert.Equal("invalid-url", result.Vehicle.ImageUrl);
         Assert.Null(result.Vehicle.Version);
+    }
+
+    [Fact]
+    public void Urls_are_cleaned_by_presence_only()
+    {
+        var source = new CatalogSourceVehicle("1", "Carro", null, null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, "  not a url  ", " image-value ");
+        var result = _validator.ValidateAndNormalize(source);
+        Assert.Equal("not a url", result.Vehicle!.Url);
+        Assert.Equal("image-value", result.Vehicle.ImageUrl);
+    }
+
+    [Theory]
+    [InlineData(true, 1_000, true)]
+    [InlineData(true, 1_001, false)]
+    [InlineData(false, 1_000, true)]
+    [InlineData(false, 1_001, false)]
+    public void Url_and_image_accept_free_form_values_only_within_copy_boundary(bool url, int length, bool valid)
+    {
+        var value = new string('x', length);
+        var source = new CatalogSourceVehicle("1", "Carro", null, null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, url ? value : null, url ? null : value);
+        var result = _validator.ValidateAndNormalize(source);
+        Assert.Equal(valid, result.IsValid);
+        if (!valid) Assert.Equal(url ? "url_too_long" : "image_url_too_long", result.Reason);
     }
 
     [Theory]

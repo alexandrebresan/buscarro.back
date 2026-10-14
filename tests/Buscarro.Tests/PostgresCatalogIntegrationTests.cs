@@ -127,6 +127,28 @@ public sealed class PostgresCatalogIntegrationTests
 
     [PostgresIntegrationFact]
     [Trait("Category", "PostgreSqlIntegration")]
+    public async Task Published_snapshot_reads_carzin_and_autodev_current_generations_together()
+    {
+        await using var fixture = new PostgresTestDatabaseFixture(); await fixture.InitializeAsync(); await using var context = await MigratedContextAsync(fixture);
+        var carzin = Provider(fixture) + "_carzin"; var autoDev = Provider(fixture) + "_autodev"; var now = DateTimeOffset.UtcNow;
+        var carzinGeneration = await AddReadyAsync(context, carzin, 1, now);
+        var autoDevGeneration = await AddReadyAsync(context, autoDev, 1, now.AddSeconds(1));
+        await using var dataSource = NpgsqlDataSource.Create(fixture.ConnectionString);
+        var writer = new PostgresVehicleCatalogBatchWriter(dataSource);
+        await writer.WriteBatchAsync([
+            new VehicleCatalogItem(carzinGeneration.Id, carzin, "c-1", "Carzin", "carzin"),
+            new VehicleCatalogItem(autoDevGeneration.Id, autoDev, "a-1", "AutoDev", "autodev")], TestContext.Current.CancellationToken);
+        var publisher = new PostgresCatalogPublisher(context);
+        await publisher.PublishAsync(carzinGeneration.Id, now.AddSeconds(2), TestContext.Current.CancellationToken);
+        var publication = await publisher.PublishAsync(autoDevGeneration.Id, now.AddSeconds(3), TestContext.Current.CancellationToken);
+        var options = Options.Create(new CatalogQueryOptions { CommandTimeoutSeconds = 3, CacheSizeLimit = 100 }); using var cache = new CatalogQueryCache(options);
+        var results = await new PostgresVehicleCatalogReadService(dataSource, cache, options)
+            .SearchAsync(Criteria([carzin.ToLowerInvariant(), autoDev.ToLowerInvariant()], 1, 20), TestContext.Current.CancellationToken);
+        Assert.Equal(publication.Id, results.PublicationId); Assert.Equal(2, results.TotalCount); Assert.Equal(2, results.Vehicles.Select(vehicle => vehicle.Provider).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
+    [PostgresIntegrationFact]
+    [Trait("Category", "PostgreSqlIntegration")]
     public async Task Active_vehicle_lookup_reads_only_the_published_provider_generation()
     {
         await using var fixture = new PostgresTestDatabaseFixture();
@@ -174,6 +196,8 @@ public sealed class PostgresCatalogIntegrationTests
         var expiredFailed=new CatalogGeneration(provider+"_failed",now.AddDays(-3));expiredFailed.MarkFailed("safe",now.AddDays(-3));context.AddRange(recentLoading,expiredReady,expiredFailed);await context.SaveChangesAsync();
         context.Add(new VehicleCatalogItem(expiredFailed.Id,expiredFailed.Provider,"failed-1","Failed","failed"));await context.SaveChangesAsync();
         var retention=new CatalogRetentionRepository(context);var rows=await retention.DeleteVehicleRowsForFailedGenerationsAsync(TestContext.Current.CancellationToken);
+        // ExecuteDelete bypasses the tracker; the seed's deleted child must not be deleted again by client cascade.
+        context.ChangeTracker.Clear();
         var removed=await retention.DeleteUnreferencedAsync(now.AddDays(-1),now.AddDays(-1),TestContext.Current.CancellationToken);await context.SaveChangesAsync();
         Assert.Equal(1,rows);Assert.Equal(2,removed);
         var remaining=await context.CatalogGenerations.AsNoTracking().Select(x=>x.Id).ToListAsync();
@@ -194,6 +218,7 @@ public sealed class PostgresCatalogIntegrationTests
 
     private static string Provider(PostgresTestDatabaseFixture fixture)=>"p_"+fixture.Schema;
     private static NormalizedVehicleCatalogSearchCriteria Criteria(string provider,int page,int size)=>new(null,[provider.ToLowerInvariant()],[],[],[],[],[],[],[],[],null,null,null,null,null,page,size);
+    private static NormalizedVehicleCatalogSearchCriteria Criteria(string[] providers,int page,int size)=>new(null,providers,[],[],[],[],[],[],[],[],null,null,null,null,null,page,size);
 }
 
 internal sealed class PostgresIntegrationFactAttribute : FactAttribute

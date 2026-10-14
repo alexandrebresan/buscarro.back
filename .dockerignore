@@ -8,3 +8,26 @@ artifacts/
 README.md
 Dockerfile
 docker-compose*.yml
+
+# Production build context: never include local configuration or secrets.
+**/appsettings.Development.json
+**/.env
+**/*.env
+**/*.env.*
+**/*.pfx
+**/*.p12
+**/*.pem
+**/*.key
+**/*.crt
+**/TestResults/
+output/
+.worktrees/
+.codex/
+.agents/
+docs/
+scripts/
+**/*.sql
+deploy/**
+!deploy/aws/
+!deploy/aws/scripts/
+!deploy/aws/scripts/migrate.sh

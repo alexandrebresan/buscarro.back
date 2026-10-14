@@ -1,16 +1,22 @@
 using Buscarro.Domain.Entities;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Buscarro.Infrastructure.Persistence;
 
-public sealed class BuscarroDbContext : DbContext
+public sealed class BuscarroDbContext : DbContext, IDataProtectionKeyContext
 {
     public BuscarroDbContext(DbContextOptions<BuscarroDbContext> options)
         : base(options)
     {
     }
 
+    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
     public DbSet<User> Users => Set<User>();
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<UserExternalLogin> UserExternalLogins => Set<UserExternalLogin>();
+    public DbSet<GoogleAuthChallenge> GoogleAuthChallenges => Set<GoogleAuthChallenge>();
     public DbSet<FavoriteVehicle> FavoriteVehicles => Set<FavoriteVehicle>();
     public DbSet<VehicleProviderManufacturer> VehicleProviderManufacturers => Set<VehicleProviderManufacturer>();
     public DbSet<VehicleProviderModel> VehicleProviderModels => Set<VehicleProviderModel>();

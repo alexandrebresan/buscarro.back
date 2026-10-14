@@ -1,77 +1,83 @@
+using System.Security.Claims;
+using Buscarro.Api.Configurations;
 using Buscarro.Application.Commands;
-using Buscarro.Application.Exceptions;
+using Buscarro.Application.DTOs;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Buscarro.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
-public class AuthController : ControllerBase
+[Route("api/auth")]
+[ServiceFilter(typeof(AuthTransportFilter))]
+public sealed class AuthController(IMediator mediator, AuthAntiforgeryService antiforgery) : ControllerBase
 {
-    private const string UserIdSessionKey = "UserId";
-
-    private readonly IMediator _mediator;
-
-    public AuthController(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
+    [HttpGet("csrf")]
+    [AllowAnonymous]
+    public IActionResult Csrf() => Ok(new { token = antiforgery.GetToken(HttpContext) });
 
     [HttpPost("register")]
-    public async Task<IActionResult> Register(
-        [FromBody] RegisterUserCommand command,
-        CancellationToken cancellationToken)
+    [AllowAnonymous]
+    public async Task<IActionResult> Register([FromBody] RegisterUserCommand command, CancellationToken cancellationToken)
     {
-        if (command is null)
-        {
-            return BadRequest("Requisicao invalida.");
-        }
-
-        try
-        {
-            var result = await _mediator.Send(command, cancellationToken);
-            StoreCurrentUser(result.User.Id);
-            return Created(string.Empty, result);
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (ConflictException ex)
-        {
-            return Conflict(ex.Message);
-        }
+        var result = await mediator.Send(command, cancellationToken);
+        WriteRefreshCookie(result);
+        return Created(string.Empty, result.Response);
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login(
-        [FromBody] LoginUserCommand command,
-        CancellationToken cancellationToken)
+    [AllowAnonymous]
+    public async Task<IActionResult> Login([FromBody] LoginUserCommand command, CancellationToken cancellationToken)
     {
-        if (command is null)
-        {
-            return BadRequest("Requisicao invalida.");
-        }
-
-        try
-        {
-            var result = await _mediator.Send(command, cancellationToken);
-            StoreCurrentUser(result.User.Id);
-            return Ok(result);
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (AuthenticationFailedException ex)
-        {
-            return Unauthorized(ex.Message);
-        }
+        var result = await mediator.Send(command, cancellationToken);
+        WriteRefreshCookie(result);
+        return Ok(result.Response);
     }
 
-    private void StoreCurrentUser(Guid userId)
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
     {
-        HttpContext.Session.SetString(UserIdSessionKey, userId.ToString());
+        var result = await mediator.Send(new RefreshSessionCommand(Request.Cookies[AuthCookies.RefreshName]), cancellationToken);
+        WriteRefreshCookie(result);
+        return Ok(result.Response);
     }
+
+    [HttpPost("logout")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
+    {
+        await mediator.Send(new LogoutSessionCommand(Request.Cookies[AuthCookies.RefreshName]), cancellationToken);
+        AuthCookies.ClearRefresh(HttpContext);
+        return NoContent();
+    }
+
+    [HttpPost("google/challenge")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GoogleChallenge(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new CreateGoogleChallengeCommand(AuthCookies.GetOrCreateBrowserBinding(HttpContext)), cancellationToken));
+
+    [HttpPost("google")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Google([FromBody] GoogleLoginRequest request, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GoogleLoginCommand(request.IdToken, request.ChallengeId,
+            Request.Cookies[AuthCookies.BrowserName] ?? string.Empty, request.Password, request.DisplayName), cancellationToken);
+        WriteRefreshCookie(result);
+        return Ok(result.Response);
+    }
+
+    [HttpPost("password/reactivate")]
+    [Authorize]
+    public async Task<IActionResult> ReactivatePassword([FromBody] ReactivatePasswordRequest request, CancellationToken cancellationToken)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var sessionId = Guid.Parse(User.FindFirstValue("sid")!);
+        await mediator.Send(new ReactivatePasswordCommand(userId, sessionId, request.Password), cancellationToken);
+        return NoContent();
+    }
+
+    private void WriteRefreshCookie(SessionResult result)
+        => AuthCookies.SetRefresh(HttpContext, result.RefreshToken, result.Response.SessionExpiresAtUtc);
 }

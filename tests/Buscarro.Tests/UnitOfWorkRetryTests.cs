@@ -11,6 +11,21 @@ namespace Buscarro.Tests;
 public sealed class UnitOfWorkRetryTests
 {
     [Fact]
+    public async Task Unique_constraint_failure_is_translated_only_after_rollback_and_tracker_clear()
+    {
+        await using var context = CreateContext();
+        var transactions = new FakeTransactionFactory();
+        var unitOfWork = new UnitOfWork(context, new EfCoreUnitOfWorkTransactionalExecutor(context, new RetryOnceExecutionStrategy(), transactions));
+        await Assert.ThrowsAsync<UniqueConstraintException>(() => unitOfWork.ExecuteInTransactionAsync(token =>
+        {
+            context.Users.Add(new User { Name = "Conflict", Email = "conflict@test" });
+            throw new DbUpdateException("Conflict", new PostgresException("duplicate", "ERROR", "ERROR", "23505"));
+        }, default));
+        Assert.Equal(1, transactions.RollbackCount);
+        Assert.Empty(context.ChangeTracker.Entries());
+    }
+
+    [Fact]
     public async Task Pre_commit_failure_clears_tracker_before_execution_strategy_retries()
     {
         await using var context = CreateContext();

@@ -15,6 +15,7 @@ public sealed class PasswordHasherService : IPasswordHasherService
 
     public bool VerifyPassword(User user, string password)
     {
+        if (string.IsNullOrEmpty(user.PasswordHash)) return false;
         var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
         return result is PasswordVerificationResult.Success or PasswordVerificationResult.SuccessRehashNeeded;
     }

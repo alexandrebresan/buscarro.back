@@ -62,11 +62,19 @@ public sealed class JwtTokenServiceTests
             }),
             new FixedTimeProvider(new DateTimeOffset(2026, 5, 18, 12, 0, 0, TimeSpan.Zero)));
 
-        var result = service.CreateToken(user);
+        var session = new UserSession
+        {
+            UserId = user.Id,
+            ExpiresAtUtc = new DateTime(2026, 5, 18, 12, 30, 0, DateTimeKind.Utc)
+        };
+        var result = service.CreateToken(user, session);
 
         var token = new JwtSecurityTokenHandler().ReadJwtToken(result.Token);
         Assert.Equal("Bearer", result.TokenType);
-        Assert.Equal(new DateTime(2026, 5, 18, 13, 0, 0, DateTimeKind.Utc), result.ExpiresAtUtc);
+        Assert.Equal(session.ExpiresAtUtc, result.ExpiresAtUtc);
+        Assert.Contains(token.Claims, claim => claim.Type == "sid" && claim.Value == session.Id.ToString());
+        Assert.Contains(token.Claims, claim => claim.Type == "jti" && !string.IsNullOrEmpty(claim.Value));
+        Assert.Contains(token.Claims, claim => claim.Type == "iat");
         Assert.Contains(token.Claims, claim =>
             claim.Type == ClaimTypes.NameIdentifier &&
             claim.Value == user.Id.ToString());

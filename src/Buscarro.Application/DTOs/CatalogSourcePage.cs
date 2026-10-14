@@ -6,4 +6,5 @@ public sealed record CatalogSourcePage(
     int? CurrentResults,
     int? TotalPages,
     int? TotalResults,
-    IReadOnlyCollection<CatalogSourceVehicle> Items);
+    IReadOnlyCollection<CatalogSourceVehicle> Items,
+    bool? HasNext = null);

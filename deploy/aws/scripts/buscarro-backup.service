@@ -1,0 +1,8 @@
+[Unit]
+Description=Buscarro PostgreSQL backup
+Requires=docker.service
+After=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/buscarro
+ExecStart=/bin/bash /opt/buscarro/scripts/backup.sh /opt/buscarro /opt/buscarro/backups

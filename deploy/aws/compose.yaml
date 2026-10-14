@@ -1,0 +1,106 @@
+name: buscarro
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?Set POSTGRES_IMAGE}
+    env_file: postgres.env
+    restart: unless-stopped
+    logging: *logging
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+  api:
+    image: buscarro-api:${IMAGE_TAG:?Set IMAGE_TAG}
+    env_file: api.env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      CatalogReadiness__MaximumCatalogAge: '3.00:00:00'
+      Auth__TrustedProxyAddresses__0: ${PROXY_IP:?Set PROXY_IP}
+      Auth__DataProtectionCertificatePath: /run/certificates/dataprotection.pfx
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      postgres: {condition: service_healthy}
+    volumes:
+      - type: bind
+        source: ./certificates/dataprotection.pfx
+        target: /run/certificates/dataprotection.pfx
+        read_only: true
+        bind: {create_host_path: false}
+    networks: [backend, edge, egress]
+  worker:
+    image: buscarro-worker:${IMAGE_TAG:?Set IMAGE_TAG}
+    env_file: worker.env
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      CatalogWorker__SynchronizationInterval: '1.00:00:00'
+      CatalogWorker__ProviderSynchronizationIntervals__AutoDev: '2.00:00:00'
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [backend, egress]
+  proxy:
+    image: ${CADDY_IMAGE:?Set CADDY_IMAGE}
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?Set API_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL}
+    restart: unless-stopped
+    logging: *logging
+    ports: ['80:80', '443:443']
+    volumes:
+      - type: bind
+        source: ./Caddyfile
+        target: /etc/caddy/Caddyfile
+        read_only: true
+        bind: {create_host_path: false}
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [api]
+    networks:
+      edge:
+        ipv4_address: ${PROXY_IP:?Set PROXY_IP}
+      public: {}
+  migrate:
+    image: buscarro-migrations:${IMAGE_TAG:?Set IMAGE_TAG}
+    env_file: migrate.env
+    profiles: [maintenance]
+    restart: 'no'
+    logging: *logging
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [backend]
+  seed:
+    image: buscarro-seed:${IMAGE_TAG:?Set IMAGE_TAG}
+    env_file: seed.env
+    profiles: [maintenance]
+    restart: 'no'
+    logging: *logging
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [backend, egress]
+networks:
+  backend:
+    internal: true
+  edge:
+    internal: true
+    ipam:
+      config:
+        - subnet: ${PROXY_SUBNET:?Set PROXY_SUBNET}
+  egress: {}
+  public: {}
+volumes:
+  postgres_data: {}
+  caddy_data: {}
+  caddy_config: {}

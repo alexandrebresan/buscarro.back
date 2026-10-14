@@ -13,6 +13,33 @@ namespace Buscarro.Tests;
 
 public sealed class ApiExceptionMiddlewareTests
 {
+    [Fact]
+    public async Task Unknown_auth_commit_clears_cookie_and_returns_operational_error_without_sensitive_detail()
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Path = "/api/auth/refresh";
+        context.Response.Body = new MemoryStream();
+        var middleware = new ApiExceptionMiddleware(_ => throw new TransactionCommitOutcomeUnknownException(new Exception("private-database-detail")), NullLogger<ApiExceptionMiddleware>.Instance);
+        await middleware.InvokeAsync(context);
+        context.Response.Body.Position = 0;
+        var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        Assert.Equal(503, context.Response.StatusCode);
+        Assert.Contains("session_state_unknown", body);
+        Assert.DoesNotContain("private-database-detail", body);
+        Assert.Contains("__Host-Buscarro.Refresh=", context.Response.Headers.SetCookie.ToString());
+        Assert.Equal("no-store", context.Response.Headers.CacheControl);
+    }
+
+    [Fact]
+    public async Task Dependency_failure_does_not_masquerade_as_invalid_session()
+    {
+        var context = new DefaultHttpContext();
+        context.Response.Body = new MemoryStream();
+        var middleware = new ApiExceptionMiddleware(_ => throw new AuthUnavailableException(), NullLogger<ApiExceptionMiddleware>.Instance);
+        await middleware.InvokeAsync(context);
+        Assert.Equal(503, context.Response.StatusCode);
+        Assert.False(context.Response.Headers.ContainsKey("Set-Cookie"));
+    }
     [Theory]
     [InlineData(true,400,"validation_error")]
     [InlineData(false,503,"catalog_unavailable")]

@@ -4,6 +4,8 @@ Back-end em .NET para uma Web API de consulta e normalizacao de veiculos vindos 
 
 O projeto segue Clean Architecture, CQRS e MediatR:
 
+Autenticacao com JWT, refresh token e Google. Configure `Jwt__Issuer`, `Jwt__Audience`, `Jwt__Secret` (minimo 32 bytes), `Google__ClientId` e as origens exatas em `Auth__AllowedOrigins__0` e `Cors__AllowedOrigins__0`. Fora de Development, a API exige certificado PFX com chave privada para Data Protection e a senha correspondente. Use ambiente ou secret store; veja os nomes de configuracao no [exemplo da API](deploy/aws/api.env.example), sem publicar credenciais.
+
 - `src/Buscarro.Api`: controllers, configuracoes e entrada HTTP.
 - `src/Buscarro.Application`: commands, queries, handlers, DTOs e interfaces de aplicacao.
 - `src/Buscarro.Domain`: entidades e interfaces do dominio.
@@ -15,7 +17,7 @@ O projeto segue Clean Architecture, CQRS e MediatR:
 
 - [Git](https://git-scm.com/downloads).
 - [.NET SDK 9.0](https://dotnet.microsoft.com/download).
-- PostgreSQL local ou banco PostgreSQL no Render.
+- PostgreSQL local ou container privado na EC2 AWS da faculdade.
 - Ferramenta do Entity Framework Core:
 
 ```powershell
@@ -34,7 +36,7 @@ Para desenvolvimento local, configure `src/Buscarro.Api/appsettings.Development.
 }
 ```
 
-No Render, configure a API com `DATABASE_URL` usando a Internal Database URL do PostgreSQL.
+Na AWS, use `ConnectionStrings__BuscarroDb` Npgsql com `Host=postgres`; não configure `DATABASE_URL`. Use os arquivos de ambiente de exemplo em [deploy/aws](deploy/aws).
 
 ## Restaurar, compilar e testar
 
@@ -71,12 +73,7 @@ Local:
 dotnet ef database update --project .\src\Buscarro.Infrastructure\Buscarro.Infrastructure.csproj --startup-project .\src\Buscarro.Api\Buscarro.Api.csproj
 ```
 
-Render, usando a External Database URL do PostgreSQL:
-
-```powershell
-$env:DATABASE_URL="postgresql://USER:PASSWORD@HOST/DATABASE"
-dotnet ef database update --project .\src\Buscarro.Infrastructure\Buscarro.Infrastructure.csproj --startup-project .\src\Buscarro.Api\Buscarro.Api.csproj
-```
+Na EC2, execute `docker compose --profile maintenance run --rm migrate` no diretorio de implantacao, com PostgreSQL healthy e `migrate.env` configurado. Faca backup antes de atualizar um banco existente.
 
 ## Rodar SeedSync Carzin
 
@@ -107,12 +104,14 @@ O catalogo online e alimentado por um Worker separado. A API nao agenda nem hosp
 $env:DATABASE_URL="postgresql://USER:PASSWORD@HOST/DATABASE"
 $env:Carzin__BaseUrl="https://carzin.com.br"
 $env:Carzin__Token="TOKEN_DA_CARZIN"
+$env:AutoDev__BaseUrl="https://api.auto.dev/"
+$env:AutoDev__ApiKey="CHAVE_DA_AUTODEV"
 dotnet run --project .\src\Buscarro.CatalogSync.Worker\Buscarro.CatalogSync.Worker.csproj -c Release
 ```
 
-Por padrao, a primeira sincronizacao comeca apos 15 segundos, repete a cada 6 horas e a limpeza roda a cada 24 horas. Cada provider e processado sequencialmente por comandos MediatR. Um advisory lock de sessao impede duas sincronizacoes simultaneas do mesmo provider.
+Por padrao, a primeira sincronizacao comeca apos 15 segundos, repete Carzin a cada 24 horas e AutoDev a cada 48 horas e a limpeza roda a cada 24 horas. Cada provider e processado sequencialmente por comandos MediatR. Um advisory lock de sessao impede duas sincronizacoes simultaneas do mesmo provider.
 
-O Worker le apenas o endpoint comprovado `POST /api/classified-search` da Carzin, com `token`, `type=1`, `page` e `results`. Ele grava lotes via PostgreSQL binary COPY, valida a geracao completa e so entao publica a nova versao. Falhas anteriores ao estado `Ready` ficam registradas como `Failed`; falhas de publicacao preservam a geracao `Ready` para reconciliacao.
+O Worker consulta `POST /api/classified-search` da Carzin, com `token`, `type=1`, `page` e `results`, e `GET /listings` da AutoDev, com paginacao e autenticacao por API key. Para AutoDev, converte precos de USD para BRL usando a cotacao de venda PTAX mais recente valida do Banco Central e quilometragem de milhas para quilometros. Grava lotes via PostgreSQL binary COPY, valida a geracao completa e so entao publica a nova versao. Falhas anteriores ao estado `Ready` ficam registradas como `Failed`; falhas de publicacao preservam a geracao `Ready` para reconciliacao.
 
 Antes de sincronizar anuncios, execute o `Buscarro.CarzinSeedSync` para preencher a correlacao codigo/nome de fabricantes, modelos e versoes. O Worker carrega essas tabelas e o catalogo persistido de cor, cambio e combustivel uma unica vez por sincronizacao, converte os codigos em memoria e grava em `vehicle_catalog` somente os nomes. A API nunca chama a Carzin: buscas e favoritos usam exclusivamente a publicacao ativa do PostgreSQL.
 
@@ -129,30 +128,17 @@ URLs padrao:
 - HTTPS: `https://localhost:7175`
 - HTTP: `http://localhost:5294`
 - Swagger: `https://localhost:7175/swagger` ou `http://localhost:5294/swagger`
-- Health check: `/health`
+- Health checks: `/health/live` e `/health/ready`
 
-## Deploy no Render
+## Deploy manual na AWS da faculdade
 
-1. Crie um PostgreSQL no Render na mesma regiao da API.
-2. Guarde a Internal Database URL para a API.
-3. Guarde a External Database URL para migrations e SeedSync manuais.
-4. Crie um Web Service conectado ao repositorio.
-5. Selecione deploy via Docker.
-6. Configure as variaveis:
+O [Compose de producao](deploy/aws/compose.yaml) executa API, Worker, PostgreSQL e proxy HTTPS Caddy em uma EC2 Ubuntu; migrations e SeedSync ficam no perfil `maintenance`. O frontend continua na Vercel. Nao ha provisionamento automatico nem deploy acionado por push no GitHub.
 
-```text
-DATABASE_URL=<Internal Database URL>
-ASPNETCORE_ENVIRONMENT=Production
-Jwt__Issuer=Buscarro
-Jwt__Audience=Buscarro.Api
-Jwt__Secret=<segredo com pelo menos 32 bytes>
-```
+Gere as imagens no Windows com PowerShell 7 e Docker Desktop, usando [Build-AwsPackage.ps1](deploy/aws/scripts/Build-AwsPackage.ps1) com `-Version <versao>` e `-Platform linux/arm64` ou `linux/amd64`, conforme a EC2. Transfira o pacote `artifacts/aws/<versao>` por SCP, importe `images.tar` com `docker load` e configure os arquivos `.env` e `<servico>.env` a partir dos exemplos. Mantenha credenciais e certificado fora do Git.
 
-7. Aplique migrations manualmente com a External Database URL.
-8. Rode o SeedSync manualmente com a External Database URL.
-9. Faca deploy da API no Render e valide `/health`.
+Para banco novo, inicie `postgres`, execute `migrate`, execute `seed` com os caminhos reais da Carzin e inicie `worker`. Confirme a publicacao de ambos os providers antes de iniciar `api proxy`. Valide HTTPS, `/health/live` e `/health/ready`; so depois altere o destino `/api` na Vercel, preservando caminhos, cookies e headers de autenticacao.
 
-No plano free/manual, migrations e SeedSync ficam fora do pre-deploy do Render.
+Antes de atualizar, faca e teste um backup usando [backup.sh](deploy/aws/scripts/backup.sh); guarde uma copia fora da EC2, junto do PFX e dos segredos de recuperacao. Pare API e Worker durante migrations e preserve volumes e a versao anterior das imagens. Rollback da aplicacao nao desfaz migrations. Nunca execute `docker compose down -v` em producao. Monitore memoria e disco durante as cargas e alinhe qualquer aumento de capacidade com o professor.
 
 ## Observacoes
 

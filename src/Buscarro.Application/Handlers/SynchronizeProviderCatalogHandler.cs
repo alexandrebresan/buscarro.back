@@ -83,14 +83,15 @@ public sealed class SynchronizeProviderCatalogHandler(
         int? stableTotalPages = null; int? stableTotalResults = null; var pageCount = 0;
         bool? hasTotalPages = null, hasTotalResults = null;
         var validationDuration=TimeSpan.Zero;var writeDuration=TimeSpan.Zero;
+        var pageSize = source.PageSize ?? options.PageSize;
 
         for (var pageNumber = 1; pageNumber <= options.MaxPages; pageNumber++)
         {
-            var page = await source.ReadPageAsync(pageNumber, options.PageSize, token);
+            var page = await source.ReadPageAsync(pageNumber, pageSize, token);
             pageCount++;
-            ValidatePage(page, pageNumber, options.PageSize, options.MaxPages,
+            ValidatePage(page, pageNumber, pageSize, options.MaxPages,
                 ref hasTotalPages, ref stableTotalPages, ref hasTotalResults, ref stableTotalResults);
-            if (stableTotalPages is int knownTotalPages && pageNumber < knownTotalPages && page.Items.Count < options.PageSize)
+            if (stableTotalPages is int knownTotalPages && pageNumber < knownTotalPages && page.Items.Count < pageSize)
                 throw new InvalidOperationException("catalog_page_incomplete_before_final");
             sourceCount += page.Items.Count;
             if (sourceCount > options.MaxVehicles) throw new InvalidOperationException("catalog_vehicle_limit_exceeded");
@@ -118,7 +119,25 @@ public sealed class SynchronizeProviderCatalogHandler(
                 batch.Add(entity); valid++; AppendChecksum(checksum, entity);
                 if (batch.Count >= options.BatchSize) { var writeStarted=Stopwatch.GetTimestamp();await batchWriter.WriteBatchAsync(batch, token);writeDuration+=Stopwatch.GetElapsedTime(writeStarted);batch.Clear(); }
             }
-            if (stableTotalPages is int exact ? pageNumber >= exact : page.Items.Count == 0 || page.Items.Count < options.PageSize) break;
+            if (page.HasNext is false)
+            {
+                if (stableTotalPages is int remainingTotalPages && pageNumber < remainingTotalPages)
+                    throw new InvalidOperationException("catalog_has_next_missing_before_final");
+                if (stableTotalResults is int knownTotalResults && sourceCount < knownTotalResults)
+                    throw new InvalidOperationException("catalog_total_results_incomplete");
+                break;
+            }
+            if (stableTotalPages is int finalTotalPages && pageNumber >= finalTotalPages)
+            {
+                if (page.HasNext is true) throw new InvalidOperationException("catalog_has_next_after_final");
+                break;
+            }
+            if (page.HasNext is true)
+            {
+                if (pageNumber == options.MaxPages) throw new InvalidOperationException("catalog_page_limit_exceeded");
+                continue;
+            }
+            if (stableTotalPages is int exact ? pageNumber >= exact : page.Items.Count == 0 || page.Items.Count < pageSize) break;
             if (pageNumber == options.MaxPages) throw new InvalidOperationException("catalog_page_limit_exceeded");
         }
         if (batch.Count > 0) {var writeStarted=Stopwatch.GetTimestamp();await batchWriter.WriteBatchAsync(batch, token);writeDuration+=Stopwatch.GetElapsedTime(writeStarted);}

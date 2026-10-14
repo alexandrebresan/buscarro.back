@@ -2,77 +2,26 @@ using Buscarro.Application.Commands;
 using Buscarro.Application.DTOs;
 using Buscarro.Application.Exceptions;
 using Buscarro.Application.Interfaces;
-using Buscarro.Domain.Entities;
+using Buscarro.Application.Services;
 using Buscarro.Domain.Interfaces;
 using MediatR;
-
 namespace Buscarro.Application.Handlers;
-
-public sealed class LoginUserHandler : IRequestHandler<LoginUserCommand, AuthResponse>
+public sealed class LoginUserHandler(IUserRepository users, IAuthSessionRepository sessions, IPasswordHasherService hasher, IUnitOfWork uow, ISessionIssuer issuer) : IRequestHandler<LoginUserCommand, SessionResult>
 {
-    private readonly IUserRepository _users;
-    private readonly IPasswordHasherService _passwordHasher;
-    private readonly IJwtTokenService _jwtTokenService;
-
-    public LoginUserHandler(
-        IUserRepository users,
-        IPasswordHasherService passwordHasher,
-        IJwtTokenService jwtTokenService)
+    public async Task<SessionResult> Handle(LoginUserCommand request, CancellationToken ct)
     {
-        _users = users;
-        _passwordHasher = passwordHasher;
-        _jwtTokenService = jwtTokenService;
-    }
-
-    public async Task<AuthResponse> Handle(LoginUserCommand request, CancellationToken cancellationToken)
-    {
-        var email = NormalizeEmail(request.Email);
-        var password = NormalizeRequired(request.Password, "Senha");
-        var user = await _users.GetByEmailAsync(email, cancellationToken);
-
-        if (user is null || !_passwordHasher.VerifyPassword(user, password))
+        var email = AuthInput.Email(request.Email);
+        var password = AuthInput.Required(request.Password, "Senha");
+        SessionResult? result = null;
+        await uow.ExecuteInTransactionAsync(async token =>
         {
-            throw new AuthenticationFailedException();
-        }
-
-        return ToAuthResponse(user, _jwtTokenService.CreateToken(user));
-    }
-
-    private static AuthResponse ToAuthResponse(User user, JwtTokenResponse token)
-    {
-        return new AuthResponse
-        {
-            Token = token.Token,
-            TokenType = token.TokenType,
-            ExpiresAtUtc = token.ExpiresAtUtc,
-            User = new UserResponse
-            {
-                Id = user.Id,
-                Name = user.Name,
-                Email = user.Email
-            }
-        };
-    }
-
-    private static string NormalizeEmail(string? value)
-    {
-        var email = NormalizeRequired(value, "E-mail").ToLowerInvariant();
-
-        if (!email.Contains('@', StringComparison.Ordinal))
-        {
-            throw new AuthenticationFailedException();
-        }
-
-        return email;
-    }
-
-    private static string NormalizeRequired(string? value, string fieldName)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new ValidationException($"{fieldName} e obrigatorio.");
-        }
-
-        return value.Trim();
+            result = null;
+            var candidate = await users.GetByEmailAsync(email, token);
+            var user = candidate is null ? null : await sessions.LockUserAsync(candidate.Id, token);
+            if (user is null || !user.PasswordLoginEnabled || user.PasswordHash is null || !hasher.VerifyPassword(user, password))
+                throw new AuthenticationFailedException();
+            result = await issuer.CreateAsync(user, "password", token);
+        }, ct);
+        return result!;
     }
 }

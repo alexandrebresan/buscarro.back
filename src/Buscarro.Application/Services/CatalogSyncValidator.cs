@@ -25,13 +25,15 @@ public sealed class CatalogSyncValidator(TimeProvider timeProvider, CatalogSynch
             Title = Clean(source.Title), Brand = Clean(source.Brand), Model = Clean(source.Model), Version = Clean(source.Version),
             ManufacturerCode = Clean(source.ManufacturerCode), ModelCode = Clean(source.ModelCode), VersionCode = Clean(source.VersionCode),
             Fuel = Clean(source.Fuel), Transmission = Clean(source.Transmission), Color = Clean(source.Color), City = Clean(source.City), State = Clean(source.State),
-            Url = ValidAbsoluteUrl(source.Url), ImageUrl = ValidAbsoluteUrl(source.ImageUrl),
+            Url = Clean(source.Url), ImageUrl = Clean(source.ImageUrl),
             Year = source.Year, Mileage = source.Mileage, Price = source.Price
         };
         if (normalized.Title!.Length > 300 || TooLong(normalized.Brand, 120) || TooLong(normalized.Model, 120) ||
             TooLong(normalized.Version, 160) || TooLong(normalized.ManufacturerCode, 80) || TooLong(normalized.ModelCode, 80) ||
             TooLong(normalized.VersionCode, 80) || TooLong(normalized.Fuel, 80) || TooLong(normalized.Transmission, 80) ||
             TooLong(normalized.Color, 80) || TooLong(normalized.City, 120) || TooLong(normalized.State, 80)) return Invalid("text_too_long");
+        if (TooLong(normalized.Url, 1_000)) return Invalid("url_too_long");
+        if (TooLong(normalized.ImageUrl, 1_000)) return Invalid("image_url_too_long");
         return new(true, normalized, null);
     }
 
@@ -57,10 +59,6 @@ public sealed class CatalogSyncValidator(TimeProvider timeProvider, CatalogSynch
             if (CharUnicodeInfo.GetUnicodeCategory(character) != UnicodeCategory.NonSpacingMark) builder.Append(character);
         return builder.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
     }
-
-    private static string? ValidAbsoluteUrl(string? value)
-        => Uri.TryCreate(Clean(value), UriKind.Absolute, out var uri) && uri.AbsoluteUri.Length <= 1_000 && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
-            ? uri.AbsoluteUri : null;
 
     private static bool TooLong(string? value, int maximum) => value?.Length > maximum;
 

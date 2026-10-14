@@ -21,10 +21,14 @@ public sealed class JwtTokenService : IJwtTokenService
         _timeProvider = timeProvider;
     }
 
-    public JwtTokenResponse CreateToken(User user)
+    public JwtTokenResponse CreateToken(User user, UserSession session)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var expiresAtUtc = now.AddMinutes(Math.Max(1, _options.ExpirationMinutes));
+        if (expiresAtUtc > session.ExpiresAtUtc)
+            expiresAtUtc = session.ExpiresAtUtc;
+        if (session.UserId != user.Id || !session.IsActive(now))
+            throw new InvalidOperationException("Sessao invalida para emissao do token.");
         var key = _options.CreateSecurityKey();
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var claims = new[]
@@ -32,7 +36,12 @@ public sealed class JwtTokenService : IJwtTokenService
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(JwtRegisteredClaimNames.Name, user.Name)
+            new Claim(JwtRegisteredClaimNames.Name, user.Name),
+            new Claim("sid", session.Id.ToString()),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(JwtRegisteredClaimNames.Iat,
+                new DateTimeOffset(now).ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ClaimValueTypes.Integer64)
         };
         var token = new JwtSecurityToken(
             issuer: Require(_options.Issuer, "Jwt:Issuer"),
