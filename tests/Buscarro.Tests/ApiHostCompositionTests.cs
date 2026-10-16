@@ -40,6 +40,14 @@ public sealed class ApiHostCompositionTests
 
         Assert.IsType<PostgresVehicleCatalogReadService>(
             scope.ServiceProvider.GetRequiredService<IVehicleSearchReadService>());
+        Assert.IsType<PostgresGeneralVehicleCatalogReadService>(
+            scope.ServiceProvider.GetRequiredService<IGeneralVehicleCatalogReadService>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<
+            IRequestHandler<ListManufacturersQuery, IReadOnlyCollection<string>>>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<
+            IRequestHandler<ListModelsQuery, IReadOnlyCollection<string>>>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<
+            IRequestHandler<ListVersionsQuery, IReadOnlyCollection<string>>>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<
             IRequestHandler<AddFavoriteVehicleCommand, FavoriteVehicleResponse>>());
         var forbiddenNames = new[]

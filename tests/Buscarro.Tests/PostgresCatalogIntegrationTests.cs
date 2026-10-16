@@ -149,6 +149,57 @@ public sealed class PostgresCatalogIntegrationTests
 
     [PostgresIntegrationFact]
     [Trait("Category", "PostgreSqlIntegration")]
+    public async Task Reader_interleaves_before_paging_and_keeps_price_and_year_global()
+    {
+        await using var fixture = new PostgresTestDatabaseFixture();
+        await fixture.InitializeAsync();
+        await using var context = await MigratedContextAsync(fixture);
+        var carzin = Provider(fixture) + "_carzin";
+        var autoDev = Provider(fixture) + "_autodev";
+        var now = DateTimeOffset.UtcNow;
+        var carzinGeneration = await AddReadyAsync(context, carzin, 3, now);
+        var autoDevGeneration = await AddReadyAsync(context, autoDev, 2, now);
+        await using var dataSource = NpgsqlDataSource.Create(fixture.ConnectionString);
+        await new PostgresVehicleCatalogBatchWriter(dataSource).WriteBatchAsync([
+            new VehicleCatalogItem(carzinGeneration.Id, carzin, "c1", "C1", "c1") { Price = 10, Year = 2021 },
+            new VehicleCatalogItem(carzinGeneration.Id, carzin, "c2", "C2", "c2") { Price = 30, Year = 2023 },
+            new VehicleCatalogItem(carzinGeneration.Id, carzin, "c3", "C3", "c3") { Price = 50, Year = 2025 },
+            new VehicleCatalogItem(autoDevGeneration.Id, autoDev, "a1", "A1", "a1") { Price = 20, Year = 2022 },
+            new VehicleCatalogItem(autoDevGeneration.Id, autoDev, "a2", "A2", "a2") { Price = 40, Year = 2024 }
+        ], TestContext.Current.CancellationToken);
+        var publisher = new PostgresCatalogPublisher(context);
+        await publisher.PublishAsync(carzinGeneration.Id, now, TestContext.Current.CancellationToken);
+        var publication = await publisher.PublishAsync(autoDevGeneration.Id, now, TestContext.Current.CancellationToken);
+        var options = Options.Create(new CatalogQueryOptions { CommandTimeoutSeconds = 3, CacheSizeLimit = 100 });
+        using var cache = new CatalogQueryCache(options);
+        var service = new PostgresVehicleCatalogReadService(dataSource, cache, options);
+        var criteria = Criteria([carzin.ToLowerInvariant(), autoDev.ToLowerInvariant()], 1, 3);
+        async Task<VehicleCatalogSearchResult> Search(NormalizedVehicleCatalogSearchCriteria query)
+            => await service.SearchAsync(query, TestContext.Current.CancellationToken);
+
+        var first = await Search(criteria);
+        var second = await Search(criteria with { Page = 2 });
+        Assert.Equal(["a1", "c1", "a2"], first.Vehicles.Select(v => v.ExternalId));
+        Assert.Equal(["c2", "c3"], second.Vehicles.Select(v => v.ExternalId));
+        Assert.Equal(5, first.TotalCount);
+        Assert.Equal(2, first.TotalPages);
+        Assert.Equal(publication.Id, first.PublicationId);
+        Assert.Equal(5, first.Vehicles.Concat(second.Vehicles).Select(v => (v.Provider, v.ExternalId)).Distinct().Count());
+        Assert.Empty((await Search(criteria with { Page = 3 })).Vehicles);
+        Assert.Equal(first.Vehicles.Select(v => v.ExternalId), (await Search(criteria)).Vehicles.Select(v => v.ExternalId));
+        Assert.Equal(["c1", "c2", "c3"], (await Search(criteria with { Providers = [carzin.ToLowerInvariant()] })).Vehicles.Select(v => v.ExternalId));
+        Assert.Equal(["a2", "c3"], (await Search(criteria with { YearMin = 2024 })).Vehicles.Select(v => v.ExternalId));
+
+        foreach (var order in new[] { "price", "year" })
+            Assert.Equal(["c1", "a1", "c2", "a2", "c3"],
+                (await Search(criteria with { Order = order, PageSize = 10 })).Vehicles.Select(v => v.ExternalId));
+        foreach (var order in new[] { "price-inverse", "year-inverse" })
+            Assert.Equal(["c3", "a2", "c2", "a1", "c1"],
+                (await Search(criteria with { Order = order, PageSize = 10 })).Vehicles.Select(v => v.ExternalId));
+    }
+
+    [PostgresIntegrationFact]
+    [Trait("Category", "PostgreSqlIntegration")]
     public async Task Active_vehicle_lookup_reads_only_the_published_provider_generation()
     {
         await using var fixture = new PostgresTestDatabaseFixture();

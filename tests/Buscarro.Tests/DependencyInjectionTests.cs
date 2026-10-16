@@ -104,17 +104,18 @@ public sealed class DependencyInjectionTests
             optionsLifetime: ServiceLifetime.Singleton);
         services.AddDbContextFactory<BuscarroDbContext>(options =>
             options.UseNpgsql(connectionString));
-        services.AddMemoryCache();
-        services.AddSingleton<IVehicleProviderCatalogReadService, VehicleProviderCatalogReadService>();
+        services.AddSingleton(NpgsqlDataSource.Create(connectionString));
+        services.AddOptions<CatalogQueryOptions>();
+        services.AddSingleton<IGeneralVehicleCatalogReadService, PostgresGeneralVehicleCatalogReadService>();
 
-        var exception = Record.Exception(() => services.BuildServiceProvider(
+        using var provider = services.BuildServiceProvider(
             new ServiceProviderOptions
             {
                 ValidateOnBuild = true,
                 ValidateScopes = true
-            }));
+            });
 
-        Assert.Null(exception);
+        Assert.IsType<PostgresGeneralVehicleCatalogReadService>(provider.GetRequiredService<IGeneralVehicleCatalogReadService>());
     }
 
     [Fact]

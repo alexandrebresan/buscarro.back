@@ -1,0 +1,150 @@
+name: Build and deploy EC2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Finish an active deployment; keep only the newest pending run.
+concurrency:
+  group: ec2-production-main
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17.9-bookworm
+        env:
+          POSTGRES_USER: buscarro_test
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: buscarro_test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U buscarro_test -d buscarro_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      RUN_POSTGRES_INTEGRATION_TESTS: 'true'
+      TEST_DATABASE_URL: Host=localhost;Port=5432;Database=buscarro_test;Username=buscarro_test;Password=ci-only-password
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Build
+        run: dotnet build Buscarro.sln --configuration Release
+      - name: Test including isolated PostgreSQL schemas
+        run: dotnet test tests/Buscarro.Tests/Buscarro.Tests.csproj --configuration Release --no-build --no-restore
+      - name: Test deployment scripts
+        run: |
+          bash tests/deployment/backup-tests.sh
+          pwsh -NoProfile -File tests/deployment/package-tests.ps1
+
+  deploy:
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    # Native ARM64 matches the current EC2; no QEMU or build on the server.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    env:
+      DOCKER_BUILD_RECORD_UPLOAD: 'false'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Check deployment configuration without printing secrets
+        env:
+          EC2_HOST: ${{ vars.EC2_HOST }}
+          EC2_USER: ${{ vars.EC2_USER }}
+          EC2_DEPLOY_PATH: ${{ vars.EC2_DEPLOY_PATH }}
+          EC2_HEALTH_URL: ${{ vars.EC2_HEALTH_URL }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_SSH_FINGERPRINT: ${{ vars.EC2_SSH_FINGERPRINT }}
+          TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          TS_OAUTH_SECRET: ${{ secrets.TS_OAUTH_SECRET }}
+        run: |
+          for name in EC2_HOST EC2_USER EC2_DEPLOY_PATH EC2_HEALTH_URL EC2_SSH_KEY EC2_SSH_FINGERPRINT TS_OAUTH_CLIENT_ID TS_OAUTH_SECRET; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Configure $name in the repository Actions secrets or variables before deploying."
+              exit 1
+            fi
+          done
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build API image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/arm64
+          tags: buscarro-api:${{ github.sha }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          load: true
+          push: false
+          cache-from: type=gha,scope=buscarro-api-arm64
+          cache-to: type=gha,mode=min,scope=buscarro-api-arm64
+      - name: Build worker image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: Dockerfile.catalog-sync
+          platforms: linux/arm64
+          tags: buscarro-worker:${{ github.sha }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          load: true
+          push: false
+          cache-from: type=gha,scope=buscarro-worker-arm64
+          cache-to: type=gha,mode=min,scope=buscarro-worker-arm64
+      - name: Package images only
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          mkdir -p artifacts/deploy
+          docker image save "buscarro-api:$DEPLOY_SHA" "buscarro-worker:$DEPLOY_SHA" | gzip -1 > artifacts/deploy/images.tar.gz
+          (cd artifacts/deploy && sha256sum images.tar.gz > images.sha256)
+          cp deploy/aws/scripts/deploy-images.sh artifacts/deploy/deploy-images.sh
+      - name: Skip deployment if main has already advanced
+        id: current
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          current_sha=$(curl --fail --silent --show-error --retry 2 \
+            -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/git/ref/heads/main" \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["object"]["sha"])')
+          if [[ "$current_sha" == "$DEPLOY_SHA" ]]; then
+            echo 'deploy=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'main has a newer commit; this run will not replace production.'
+            echo 'deploy=false' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Connect private deployment network
+        if: steps.current.outputs.deploy == 'true'
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          version: 1.94.2
+          hostname: buscarro-ci-${{ github.run_id }}-${{ github.run_attempt }}
+          ping: ${{ vars.EC2_HOST }}
+      - name: Send images and update API and worker
+        if: steps.current.outputs.deploy == 'true'
+        timeout-minutes: 15
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+          EC2_HOST: ${{ vars.EC2_HOST }}
+          EC2_USER: ${{ vars.EC2_USER }}
+          EC2_DEPLOY_PATH: ${{ vars.EC2_DEPLOY_PATH }}
+          EC2_HEALTH_URL: ${{ vars.EC2_HEALTH_URL }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_SSH_FINGERPRINT: ${{ vars.EC2_SSH_FINGERPRINT }}
+        run: bash deploy/aws/scripts/send-images.sh artifacts/deploy

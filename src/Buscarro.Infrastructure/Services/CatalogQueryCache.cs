@@ -13,17 +13,41 @@ public sealed class CatalogQueryCache : IDisposable
 {
     private readonly MemoryCache _cache;
     private readonly CatalogQueryOptions _options;
+    private readonly TimeProvider _timeProvider;
     private readonly object _unitLock=new();
     private readonly Dictionary<string,CacheUnit> _units=new(StringComparer.Ordinal);
-    public CatalogQueryCache(IOptions<CatalogQueryOptions> options)
+    public CatalogQueryCache(IOptions<CatalogQueryOptions> options, TimeProvider? timeProvider = null)
     {
         _options = options.Value;
+        _timeProvider = timeProvider ?? TimeProvider.System;
         _cache = new(new MemoryCacheOptions { SizeLimit = Math.Max(1, _options.CacheSizeLimit) });
     }
     public bool TryGetCount(string key, out int value) {var hit=_cache.TryGetValue("count:"+key,out value);CatalogMetrics.RecordCache("count",hit);return hit;}
     public void SetCount(string key, int value) => Set("count:"+key,value,1,TimeSpan.FromSeconds(_options.CountCacheTtlSeconds));
     internal bool TryGetPage(string key, out CatalogCachedPage value) {var hit=_cache.TryGetValue("page:"+key,out value!);CatalogMetrics.RecordCache("page",hit);return hit;}
     internal void SetPage(string key, CatalogCachedPage value) => Set("page:"+key,value,Math.Max(1,value.Vehicles.Count),TimeSpan.FromSeconds(_options.PageCacheTtlSeconds));
+    internal bool TryGetResult(string key, out VehicleCatalogSearchResult value)
+    {
+        var cacheKey = "result:" + key;
+        var hit = _cache.TryGetValue<CatalogCachedResult>(cacheKey, out var entry);
+        if (hit && entry is not null && _timeProvider.GetUtcNow() >= entry.ExpiresAtUtc)
+        {
+            _cache.Remove(cacheKey);
+            hit = false;
+        }
+        CatalogMetrics.RecordCache("result", hit);
+        value = hit && entry is not null ? CatalogSearchResultSnapshot.Copy(entry.Result, fromCache: true) : null!;
+        return hit;
+    }
+    internal void SetResult(string key, VehicleCatalogSearchResult value)
+    {
+        var ttl = TimeSpan.FromSeconds(_options.ResultCacheTtlSeconds);
+        Set("result:" + key,
+            new CatalogCachedResult(CatalogSearchResultSnapshot.Copy(value), _timeProvider.GetUtcNow() + ttl),
+            Math.Max(1, value.Vehicles.Count), ttl);
+    }
+    internal static string BuildResultKey(NormalizedVehicleCatalogSearchCriteria criteria)
+        => $"catalog:result:{Hash(Canonical(criteria, true))}";
     public static string BuildCountKey(int publicationId, NormalizedVehicleCatalogSearchCriteria c) => $"catalog:{publicationId}:count:{Hash(Canonical(c, false))}";
     public static string BuildPageKey(int publicationId, NormalizedVehicleCatalogSearchCriteria c) => $"catalog:{publicationId}:page:{Hash(Canonical(c, true))}";
     private static string Canonical(NormalizedVehicleCatalogSearchCriteria c, bool page) => JsonSerializer.Serialize(new
@@ -49,6 +73,7 @@ public sealed class CatalogQueryCache : IDisposable
         long units;lock(_unitLock){units=_units.Values.Sum(x=>x.Size);_units.Clear();}CatalogMetrics.AdjustCacheUnits(-units);_cache.Dispose();
     }
     private sealed record CacheUnit(string Key,long Size);
+    private sealed record CatalogCachedResult(VehicleCatalogSearchResult Result, DateTimeOffset ExpiresAtUtc);
 }
 
 internal sealed record CatalogCachedPage(IReadOnlyCollection<VehicleResponse> Vehicles, IReadOnlyDictionary<string, int> ProviderCounts);

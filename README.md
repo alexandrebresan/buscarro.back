@@ -132,7 +132,7 @@ URLs padrao:
 
 ## Deploy manual na AWS da faculdade
 
-O [Compose de producao](deploy/aws/compose.yaml) executa API, Worker, PostgreSQL e proxy HTTPS Caddy em uma EC2 Ubuntu; migrations e SeedSync ficam no perfil `maintenance`. O frontend continua na Vercel. Nao ha provisionamento automatico nem deploy acionado por push no GitHub.
+O [Compose de producao](deploy/aws/compose.yaml) executa API, Worker, PostgreSQL e proxy HTTPS Caddy em uma EC2 Ubuntu; migrations e SeedSync ficam no perfil `maintenance`. O frontend continua na Vercel. O deploy automatico gera imagens ARM64 no GitHub Actions e envia por SSH/Tailscale a cada push na `main`, depois da configuracao inicial de secrets e conectividade. Atualiza somente API e Worker, preservando banco e intervalos; migrations e seed continuam manuais. Nao ha provisionamento automatico de infraestrutura AWS.
 
 Gere as imagens no Windows com PowerShell 7 e Docker Desktop, usando [Build-AwsPackage.ps1](deploy/aws/scripts/Build-AwsPackage.ps1) com `-Version <versao>` e `-Platform linux/arm64` ou `linux/amd64`, conforme a EC2. Transfira o pacote `artifacts/aws/<versao>` por SCP, importe `images.tar` com `docker load` e configure os arquivos `.env` e `<servico>.env` a partir dos exemplos. Mantenha credenciais e certificado fora do Git.
 

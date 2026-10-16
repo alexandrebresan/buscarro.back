@@ -40,7 +40,7 @@ internal sealed class VehicleCatalogSqlPredicateBuilder
         "price-inverse" => "v.price DESC NULLS LAST, v.id ASC",
         "year" => "v.year ASC NULLS LAST, v.id ASC",
         "year-inverse" => "v.year DESC NULLS LAST, v.id ASC",
-        _ => "v.id ASC"
+        _ => "row_number() OVER (PARTITION BY v.provider ORDER BY v.id), lower(v.provider), v.provider"
     };
 
     private static void AddAny(string column, string name, IReadOnlyCollection<string> values, List<string> clauses, List<NpgsqlParameter> parameters)

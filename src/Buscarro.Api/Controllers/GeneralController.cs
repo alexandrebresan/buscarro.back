@@ -31,21 +31,22 @@ public class GeneralController : ControllerBase
 
     [HttpGet("models")]
     public async Task<IActionResult> ListModels(
-        [FromQuery(Name = "manufacturer_id")] Guid? manufacturerId,
+        [FromQuery] string? manufacturer,
         CancellationToken cancellationToken)
     {
         return await SendCatalogQueryAsync(
-            new ListModelsQuery(manufacturerId),
+            new ListModelsQuery(manufacturer),
             cancellationToken);
     }
 
     [HttpGet("versions")]
     public async Task<IActionResult> ListVersions(
-        [FromQuery(Name = "model_id")] Guid? modelId,
+        [FromQuery] string? model,
+        [FromQuery] string? manufacturer,
         CancellationToken cancellationToken)
     {
         return await SendCatalogQueryAsync(
-            new ListVersionsQuery(modelId),
+            new ListVersionsQuery(model, manufacturer),
             cancellationToken);
     }
 

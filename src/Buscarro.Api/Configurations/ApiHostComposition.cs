@@ -38,7 +38,8 @@ public static class ApiHostComposition
             options.AddPolicy(CorsPolicyName, policy => policy
                 .WithOrigins(allowedOrigins)
                 .AllowAnyHeader()
-                .AllowAnyMethod());
+                .AllowAnyMethod()
+                .AllowCredentials());
         });
         builder.Services.AddMemoryCache();
         builder.Services.AddSwaggerGen(options =>
@@ -96,6 +97,7 @@ public static class ApiHostComposition
         builder.Services.AddOptions<CatalogQueryOptions>()
             .Bind(builder.Configuration.GetSection(CatalogQueryOptions.SectionName))
             .Validate(options => options.CommandTimeoutSeconds > 0 &&
+                options.ResultCacheTtlSeconds > 0 &&
                 options.PageCacheTtlSeconds > 0 && options.CountCacheTtlSeconds > 0 &&
                 options.CacheSizeLimit > 0, "CatalogQuery options are invalid.")
             .ValidateOnStart();
@@ -110,7 +112,7 @@ public static class ApiHostComposition
         builder.Services.AddScoped<IPasswordHasherService, PasswordHasherService>();
         builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
         builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-        builder.Services.AddSingleton<IVehicleProviderCatalogReadService, VehicleProviderCatalogReadService>();
+        builder.Services.AddSingleton<IGeneralVehicleCatalogReadService, PostgresGeneralVehicleCatalogReadService>();
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddOptions<JwtOptions>().Bind(builder.Configuration.GetSection("Jwt"))
             .Validate(options => !string.IsNullOrWhiteSpace(options.Issuer) && !string.IsNullOrWhiteSpace(options.Audience) &&

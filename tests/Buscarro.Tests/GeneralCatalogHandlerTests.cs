@@ -1,4 +1,3 @@
-using Buscarro.Application.DTOs;
 using Buscarro.Application.Exceptions;
 using Buscarro.Application.Handlers;
 using Buscarro.Application.Interfaces;
@@ -9,123 +8,81 @@ namespace Buscarro.Tests;
 public sealed class GeneralCatalogHandlerTests
 {
     [Fact]
-    public async Task ListManufacturersHandler_returns_catalog_from_read_service()
+    public async Task Manufacturers_returns_names_and_preserves_cancellation()
     {
-        var service = new FakeVehicleProviderCatalogReadService(
-            manufacturers:
-            [
-                new ManufacturerCatalogItemResponse("10", "Honda", Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
-            ]);
-        var handler = new ListManufacturersHandler(service);
-
-        var result = await handler.Handle(new ListManufacturersQuery(), CancellationToken.None);
-
-        var manufacturer = Assert.Single(result);
-        Assert.Equal("10", manufacturer.ProviderCode);
-        Assert.Equal("Honda", manufacturer.Name);
-        Assert.Equal(Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), manufacturer.ManufacturerId);
+        var service = new FakeGeneralCatalogReadService();
+        using var cancellation = new CancellationTokenSource();
+        var result = await new ListManufacturersHandler(service).Handle(new(), cancellation.Token);
+        Assert.Equal(["Jeep"], result);
+        Assert.Equal(cancellation.Token, service.Token);
     }
 
-    [Fact]
-    public async Task ListModelsHandler_rejects_empty_manufacturer_id()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("Jeep")]
+    public async Task Models_accepts_optional_manufacturer_name(string? manufacturer)
     {
-        var handler = new ListModelsHandler(new FakeVehicleProviderCatalogReadService());
+        var service = new FakeGeneralCatalogReadService();
+        using var cancellation = new CancellationTokenSource();
+        var result = await new ListModelsHandler(service).Handle(new(manufacturer), cancellation.Token);
+        Assert.Equal(["Wrangler"], result);
+        Assert.Equal(manufacturer, service.Manufacturer);
+        Assert.Equal(cancellation.Token, service.Token);
+    }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public async Task Versions_requires_non_blank_model(string? model)
+    {
+        var service = new FakeGeneralCatalogReadService();
         var exception = await Assert.ThrowsAsync<ValidationException>(() =>
-            handler.Handle(new ListModelsQuery(null), CancellationToken.None));
-
-        Assert.Equal("manufacturer_id e obrigatorio.", exception.Message);
+            new ListVersionsHandler(service).Handle(new(model), CancellationToken.None));
+        Assert.Equal("model e obrigatorio.", exception.Message);
+        Assert.False(service.Called);
     }
 
-    [Fact]
-    public async Task ListModelsHandler_uses_manufacturer_database_id()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("Jeep")]
+    public async Task Versions_passes_model_and_optional_manufacturer(string? manufacturer)
     {
-        var manufacturerId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-        var service = new FakeVehicleProviderCatalogReadService(
-            models:
-            [
-                new ModelCatalogItemResponse("1", "Civic", Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"))
-            ]);
-        var handler = new ListModelsHandler(service);
-
-        var result = await handler.Handle(new ListModelsQuery(manufacturerId), CancellationToken.None);
-
-        Assert.Equal(manufacturerId, service.LastManufacturerId);
-        var model = Assert.Single(result);
-        Assert.Equal("1", model.ProviderCode);
-        Assert.Equal("Civic", model.Name);
-        Assert.Equal(Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"), model.ModelId);
+        var service = new FakeGeneralCatalogReadService();
+        using var cancellation = new CancellationTokenSource();
+        var result = await new ListVersionsHandler(service).Handle(new("Wrangler", manufacturer), cancellation.Token);
+        Assert.Equal(["Rubicon"], result);
+        Assert.Equal("Wrangler", service.Model);
+        Assert.Equal(manufacturer, service.Manufacturer);
+        Assert.Equal(cancellation.Token, service.Token);
     }
 
-    [Fact]
-    public async Task ListVersionsHandler_rejects_empty_model_id()
+    private sealed class FakeGeneralCatalogReadService : IGeneralVehicleCatalogReadService
     {
-        var handler = new ListVersionsHandler(new FakeVehicleProviderCatalogReadService());
-
-        var exception = await Assert.ThrowsAsync<ValidationException>(() =>
-            handler.Handle(new ListVersionsQuery(null), CancellationToken.None));
-
-        Assert.Equal("model_id e obrigatorio.", exception.Message);
-    }
-
-    [Fact]
-    public async Task ListVersionsHandler_uses_model_database_id()
-    {
-        var modelId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
-        var service = new FakeVehicleProviderCatalogReadService(
-            versions:
-            [
-                new VersionCatalogItemResponse("100", "EXL")
-            ]);
-        var handler = new ListVersionsHandler(service);
-
-        var result = await handler.Handle(new ListVersionsQuery(modelId), CancellationToken.None);
-
-        Assert.Equal(modelId, service.LastModelId);
-        var version = Assert.Single(result);
-        Assert.Equal("100", version.ProviderCode);
-        Assert.Equal("EXL", version.Name);
-    }
-
-    private sealed class FakeVehicleProviderCatalogReadService : IVehicleProviderCatalogReadService
-    {
-        private readonly IReadOnlyCollection<ManufacturerCatalogItemResponse> _manufacturers;
-        private readonly IReadOnlyCollection<ModelCatalogItemResponse> _models;
-        private readonly IReadOnlyCollection<VersionCatalogItemResponse> _versions;
-
-        public FakeVehicleProviderCatalogReadService(
-            IReadOnlyCollection<ManufacturerCatalogItemResponse>? manufacturers = null,
-            IReadOnlyCollection<ModelCatalogItemResponse>? models = null,
-            IReadOnlyCollection<VersionCatalogItemResponse>? versions = null)
+        public string? Manufacturer { get; private set; }
+        public string? Model { get; private set; }
+        public CancellationToken Token { get; private set; }
+        public bool Called { get; private set; }
+        public Task<IReadOnlyCollection<string>> ListManufacturersAsync(CancellationToken cancellationToken)
         {
-            _manufacturers = manufacturers ?? [];
-            _models = models ?? [];
-            _versions = versions ?? [];
+            Token = cancellationToken;
+            Called = true;
+            return Task.FromResult<IReadOnlyCollection<string>>(["Jeep"]);
         }
-
-        public Guid? LastManufacturerId { get; private set; }
-        public Guid? LastModelId { get; private set; }
-
-        public Task<IReadOnlyCollection<ManufacturerCatalogItemResponse>> ListManufacturersAsync(
-            CancellationToken cancellationToken)
+        public Task<IReadOnlyCollection<string>> ListModelsAsync(string? manufacturer, CancellationToken cancellationToken)
         {
-            return Task.FromResult(_manufacturers);
+            Manufacturer = manufacturer;
+            Token = cancellationToken;
+            Called = true;
+            return Task.FromResult<IReadOnlyCollection<string>>(["Wrangler"]);
         }
-
-        public Task<IReadOnlyCollection<ModelCatalogItemResponse>> ListModelsAsync(
-            Guid manufacturerId,
-            CancellationToken cancellationToken)
+        public Task<IReadOnlyCollection<string>> ListVersionsAsync(string model, string? manufacturer, CancellationToken cancellationToken)
         {
-            LastManufacturerId = manufacturerId;
-            return Task.FromResult(_models);
-        }
-
-        public Task<IReadOnlyCollection<VersionCatalogItemResponse>> ListVersionsAsync(
-            Guid modelId,
-            CancellationToken cancellationToken)
-        {
-            LastModelId = modelId;
-            return Task.FromResult(_versions);
+            Model = model;
+            Manufacturer = manufacturer;
+            Token = cancellationToken;
+            Called = true;
+            return Task.FromResult<IReadOnlyCollection<string>>(["Rubicon"]);
         }
     }
 }

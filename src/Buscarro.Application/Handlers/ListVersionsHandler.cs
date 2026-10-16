@@ -1,4 +1,3 @@
-using Buscarro.Application.DTOs;
 using Buscarro.Application.Exceptions;
 using Buscarro.Application.Interfaces;
 using Buscarro.Application.Queries;
@@ -6,25 +5,18 @@ using MediatR;
 
 namespace Buscarro.Application.Handlers;
 
-public sealed class ListVersionsHandler
-    : IRequestHandler<ListVersionsQuery, IReadOnlyCollection<VersionCatalogItemResponse>>
+public sealed class ListVersionsHandler(IGeneralVehicleCatalogReadService catalogReadService)
+    : IRequestHandler<ListVersionsQuery, IReadOnlyCollection<string>>
 {
-    private readonly IVehicleProviderCatalogReadService _catalogReadService;
-
-    public ListVersionsHandler(IVehicleProviderCatalogReadService catalogReadService)
-    {
-        _catalogReadService = catalogReadService;
-    }
-
-    public Task<IReadOnlyCollection<VersionCatalogItemResponse>> Handle(
+    public Task<IReadOnlyCollection<string>> Handle(
         ListVersionsQuery request,
         CancellationToken cancellationToken)
     {
-        if (request.ModelId is null || request.ModelId == Guid.Empty)
+        if (string.IsNullOrWhiteSpace(request.Model))
         {
-            throw new ValidationException("model_id e obrigatorio.");
+            throw new ValidationException("model e obrigatorio.");
         }
 
-        return _catalogReadService.ListVersionsAsync(request.ModelId.Value, cancellationToken);
+        return catalogReadService.ListVersionsAsync(request.Model, request.Manufacturer, cancellationToken);
     }
 }

@@ -23,6 +23,10 @@ public sealed class PostgresVehicleCatalogReadService : IVehicleSearchReadServic
 
     public async Task<VehicleCatalogSearchResult> SearchAsync(NormalizedVehicleCatalogSearchCriteria criteria, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        var resultKey = CatalogQueryCache.BuildResultKey(criteria);
+        if (_cache.TryGetResult(resultKey, out var cachedResult)) return cachedResult;
+
         try
         {
             await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
@@ -65,7 +69,7 @@ public sealed class PostgresVehicleCatalogReadService : IVehicleSearchReadServic
             var totalPages = totalCount == 0
                 ? 0
                 : checked((int)((totalCount + (long)criteria.PageSize - 1) / criteria.PageSize));
-            return new VehicleCatalogSearchResult
+            var result = new VehicleCatalogSearchResult
             {
                 Vehicles = page.Vehicles,
                 Providers = selected.OrderBy(p => p.Provider, StringComparer.OrdinalIgnoreCase).Select(p => new ProviderStatusResponse
@@ -77,6 +81,8 @@ public sealed class PostgresVehicleCatalogReadService : IVehicleSearchReadServic
                 TotalCount = totalCount,
                 Page = criteria.Page, PageSize = criteria.PageSize, TotalPages = totalPages
             };
+            _cache.SetResult(resultKey, result);
+            return CatalogSearchResultSnapshot.Copy(result);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (CatalogUnavailableException) { throw; }

@@ -36,6 +36,25 @@ public sealed class GetProviderSynchronizationDueHandlerTests
     }
 
     [Fact]
+    public async Task Restarted_worker_preserves_persisted_due_time_for_each_provider()
+    {
+        var publishedAt = new DateTimeOffset(2026, 10, 16, 12, 0, 0, TimeSpan.Zero);
+        foreach (var (provider, interval) in new[] { ("Carzin", TimeSpan.FromHours(24)), ("AutoDev", TimeSpan.FromHours(48)) })
+        {
+            var generation = new CatalogGeneration(provider, publishedAt);
+            typeof(CatalogGeneration).GetProperty(nameof(CatalogGeneration.ActivatedAtUtc))!.SetValue(generation, publishedAt);
+            var query = new GetProviderSynchronizationDueQuery(provider, interval);
+            var beforeRestart = new GetProviderSynchronizationDueHandler(new Repository(generation), new FixedTimeProvider(publishedAt.AddHours(1)));
+            var afterRestart = new GetProviderSynchronizationDueHandler(new Repository(generation), new FixedTimeProvider(publishedAt + interval - TimeSpan.FromSeconds(1)));
+            var whenDue = new GetProviderSynchronizationDueHandler(new Repository(generation), new FixedTimeProvider(publishedAt + interval));
+            Assert.False(await beforeRestart.Handle(query, TestContext.Current.CancellationToken));
+            Assert.False(await afterRestart.Handle(query, TestContext.Current.CancellationToken));
+            Assert.True(await whenDue.Handle(query, TestContext.Current.CancellationToken));
+            Assert.Equal(publishedAt, generation.ActivatedAtUtc);
+        }
+    }
+
+    [Fact]
     public async Task Maximum_interval_does_not_overflow_and_is_not_due()
     {
         var now = new DateTimeOffset(2026, 8, 22, 12, 0, 0, TimeSpan.Zero);

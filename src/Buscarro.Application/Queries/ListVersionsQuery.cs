@@ -1,6 +1,5 @@
-using Buscarro.Application.DTOs;
 using MediatR;
 
 namespace Buscarro.Application.Queries;
 
-public sealed record ListVersionsQuery(Guid? ModelId) : IRequest<IReadOnlyCollection<VersionCatalogItemResponse>>;
+public sealed record ListVersionsQuery(string? Model, string? Manufacturer = null) : IRequest<IReadOnlyCollection<string>>;
