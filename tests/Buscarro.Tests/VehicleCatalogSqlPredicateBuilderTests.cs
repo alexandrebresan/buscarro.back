@@ -23,6 +23,8 @@ public sealed class VehicleCatalogSqlPredicateBuilderTests
     [InlineData("price-inverse", "v.price DESC NULLS LAST, v.id ASC")]
     [InlineData("year", "v.year ASC NULLS LAST, v.id ASC")]
     [InlineData("year-inverse", "v.year DESC NULLS LAST, v.id ASC")]
+    [InlineData("mileage", "v.mileage ASC NULLS LAST, v.id ASC")]
+    [InlineData("mileage-inverse", "v.mileage DESC NULLS LAST, v.id ASC")]
     public void OrderBy_interleaves_default_and_preserves_global_explicit_orders(string? order,string expected) => Assert.Equal(expected,VehicleCatalogSqlPredicateBuilder.OrderBy(order));
 
     private static NormalizedVehicleCatalogSearchCriteria Criteria()=>new(null,[],[],[],[],[],[],[],[],[],null,null,null,null,null,1,20);

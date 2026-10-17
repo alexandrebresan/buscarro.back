@@ -30,6 +30,24 @@ public sealed class VehicleCatalogSearchCriteriaNormalizerTests
     public void Normalize_rejects_invalid_paging_and_order(int page,int pageSize,string? order)
         => Assert.Throws<ValidationException>(()=>_sut.Normalize(new VehicleCatalogSearchRequest { Page=page,PageSize=pageSize,Order=order }));
 
+    [Theory]
+    [InlineData("price")]
+    [InlineData("price-inverse")]
+    [InlineData("year")]
+    [InlineData("year-inverse")]
+    [InlineData("mileage")]
+    [InlineData("mileage-inverse")]
+    public void Normalize_accepts_supported_orders(string order)
+    {
+        var result = _sut.Normalize(
+            new VehicleCatalogSearchRequest
+            {
+                Order = order
+            });
+
+        Assert.Equal(order, result.Order);
+    }
+
     [Fact]
     public void Normalize_rejects_more_than_twenty_raw_values_even_when_duplicates()
         => Assert.Throws<ValidationException>(()=>_sut.Normalize(new VehicleCatalogSearchRequest { City=Enumerable.Repeat("Sao Paulo",21).ToList() }));

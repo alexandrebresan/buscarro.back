@@ -20,7 +20,7 @@ public sealed class VehicleCatalogSearchCriteriaNormalizer
         ValidateRange(request.YearMin, request.YearMax, "year");
         if (request.YearMax > DateTimeOffset.UtcNow.Year + 1) throw Invalid("yearMax excede o ano permitido.");
         var order = NormalizeOptional(request.Order);
-        if (order is not null && order is not ("price" or "price-inverse" or "year" or "year-inverse"))
+        if (order is not null && order is not ("price" or "price-inverse" or "year" or "year-inverse" or "mileage" or "mileage-inverse"))
             throw Invalid("order invalida.");
 
         var cities=NormalizeValues(request.City, 120, "city");

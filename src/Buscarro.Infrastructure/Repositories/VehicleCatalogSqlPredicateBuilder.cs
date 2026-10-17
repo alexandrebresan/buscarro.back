@@ -40,6 +40,8 @@ internal sealed class VehicleCatalogSqlPredicateBuilder
         "price-inverse" => "v.price DESC NULLS LAST, v.id ASC",
         "year" => "v.year ASC NULLS LAST, v.id ASC",
         "year-inverse" => "v.year DESC NULLS LAST, v.id ASC",
+        "mileage" => "v.mileage ASC NULLS LAST, v.id ASC",
+        "mileage-inverse" => "v.mileage DESC NULLS LAST, v.id ASC",
         _ => "row_number() OVER (PARTITION BY v.provider ORDER BY v.id), lower(v.provider), v.provider"
     };
 
