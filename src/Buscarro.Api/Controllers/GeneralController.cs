@@ -21,6 +21,39 @@ public class GeneralController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("countries")]
+    public async Task<IActionResult> ListCountries(
+        CancellationToken cancellationToken)
+    {
+        return await SendCatalogQueryAsync(
+            new ListCountriesQuery(),
+            cancellationToken);
+    }
+
+    [HttpGet("states")]
+    public async Task<IActionResult> ListStates(
+        [FromQuery] List<string>? country,
+        CancellationToken cancellationToken)
+    {
+        return await SendCatalogQueryAsync(
+            new ListStatesQuery(
+                country ?? []),
+            cancellationToken);
+    }
+
+    [HttpGet("cities")]
+    public async Task<IActionResult> ListCities(
+        [FromQuery] List<string>? country,
+        [FromQuery] List<string>? state,
+        CancellationToken cancellationToken)
+    {
+        return await SendCatalogQueryAsync(
+            new ListCitiesQuery(
+                country ?? [],
+                state ?? []),
+            cancellationToken);
+    }
+
     [HttpGet("manufacturers")]
     public async Task<IActionResult> ListManufacturers(
         CancellationToken cancellationToken)
@@ -36,7 +69,8 @@ public class GeneralController : ControllerBase
         CancellationToken cancellationToken)
     {
         return await SendCatalogQueryAsync(
-            new ListModelsQuery(manufacturer),
+            new ListModelsQuery(
+                manufacturer),
             cancellationToken);
     }
 
@@ -99,15 +133,17 @@ public class GeneralController : ControllerBase
     {
         try
         {
-            var result = await _mediator.Send(
-                query,
-                cancellationToken);
+            var result =
+                await _mediator.Send(
+                    query,
+                    cancellationToken);
 
             return Ok(result);
         }
         catch (ValidationException ex)
         {
-            return BadRequest(ex.Message);
+            return BadRequest(
+                ex.Message);
         }
         catch (RetryLimitExceededException ex)
         {

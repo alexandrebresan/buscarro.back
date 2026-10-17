@@ -2,6 +2,7 @@ using Buscarro.Application.DTOs;
 using Buscarro.Application.Exceptions;
 using Buscarro.Application.Services;
 using Buscarro.Infrastructure.Contracts;
+using Buscarro.Infrastructure.Providers;
 
 namespace Buscarro.Infrastructure.Services;
 
@@ -18,6 +19,10 @@ public sealed class OpenAiVehicleSearchCriteriaMapper(
         RejectNumericValues(
             contract.Providers,
             "providers");
+
+        RejectNumericValues(
+            contract.Countries,
+            "countries");
 
         RejectNumericValues(
             contract.States,
@@ -43,22 +48,54 @@ public sealed class OpenAiVehicleSearchCriteriaMapper(
             contract.Fuels,
             "fuels");
 
-        var criteria = new VehicleSearchCriteria
-        {
-            Providers = Copy(contract.Providers),
-            States = Copy(contract.States),
-            Cities = Copy(contract.Cities),
-            Manufacturers = Copy(contract.Manufacturers),
-            Models = Copy(contract.Models),
-            Versions = Copy(contract.Versions),
-            Colors = Copy(contract.Colors),
-            Gears = Copy(contract.Gears),
-            Fuels = Copy(contract.Fuels),
-            PriceMin = contract.PriceMin,
-            PriceMax = contract.PriceMax,
-            YearMin = contract.YearMin,
-            YearMax = contract.YearMax
-        };
+        var criteria =
+            new VehicleSearchCriteria
+            {
+                Providers =
+                    Copy(contract.Providers),
+
+                Countries =
+                    ProviderCountryCatalog
+                        .CanonicalizeCountries(
+                            contract.Countries)
+                        .ToList(),
+
+                States =
+                    Copy(contract.States),
+
+                Cities =
+                    Copy(contract.Cities),
+
+                Manufacturers =
+                    Copy(contract.Manufacturers),
+
+                Models =
+                    Copy(contract.Models),
+
+                Versions =
+                    Copy(contract.Versions),
+
+                Colors =
+                    Copy(contract.Colors),
+
+                Gears =
+                    Copy(contract.Gears),
+
+                Fuels =
+                    Copy(contract.Fuels),
+
+                PriceMin =
+                    contract.PriceMin,
+
+                PriceMax =
+                    contract.PriceMax,
+
+                YearMin =
+                    contract.YearMin,
+
+                YearMax =
+                    contract.YearMax
+            };
 
         return canonicalizer.Canonicalize(
             criteria,

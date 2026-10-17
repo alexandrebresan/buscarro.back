@@ -14,13 +14,16 @@ public sealed class VehicleSearchCriteriaMerger
         VehicleSearchCriteriaCanonicalizer canonicalizer)
     {
         _profiles = profiles ??
-            throw new ArgumentNullException(nameof(profiles));
+            throw new ArgumentNullException(
+                nameof(profiles));
 
         _timeProvider = timeProvider ??
-            throw new ArgumentNullException(nameof(timeProvider));
+            throw new ArgumentNullException(
+                nameof(timeProvider));
 
         _canonicalizer = canonicalizer ??
-            throw new ArgumentNullException(nameof(canonicalizer));
+            throw new ArgumentNullException(
+                nameof(canonicalizer));
     }
 
     public VehicleSearchCriteriaMerger(
@@ -38,30 +41,43 @@ public sealed class VehicleSearchCriteriaMerger
         IReadOnlyList<string> profileCodes,
         VehicleSearchTaxonomy taxonomy)
     {
-        ArgumentNullException.ThrowIfNull(explicitCriteria);
-        ArgumentNullException.ThrowIfNull(profileCodes);
-        ArgumentNullException.ThrowIfNull(taxonomy);
+        ArgumentNullException.ThrowIfNull(
+            explicitCriteria);
 
-        var result = _canonicalizer.Canonicalize(
-            explicitCriteria,
+        ArgumentNullException.ThrowIfNull(
+            profileCodes);
+
+        ArgumentNullException.ThrowIfNull(
             taxonomy);
+
+        var result =
+            _canonicalizer.Canonicalize(
+                explicitCriteria,
+                taxonomy);
 
         foreach (var code in profileCodes)
         {
-            var definition = _profiles.GetRequired(code);
+            var definition =
+                _profiles.GetRequired(code);
 
             var createdCriteria =
-                definition.CreateCriteria(_timeProvider) ??
+                definition.CreateCriteria(
+                    _timeProvider) ??
                 throw new InvalidOperationException(
                     $"Semantic profile '{code}' returned no criteria.");
 
-            var profile = _canonicalizer.Canonicalize(
-                createdCriteria,
-                taxonomy);
+            var profile =
+                _canonicalizer.Canonicalize(
+                    createdCriteria,
+                    taxonomy);
 
             result.Providers = Fill(
                 result.Providers,
                 profile.Providers);
+
+            result.Countries = Fill(
+                result.Countries,
+                profile.Countries);
 
             result.States = Fill(
                 result.States,
@@ -103,10 +119,17 @@ public sealed class VehicleSearchCriteriaMerger
                 result.Order,
                 profile.Order);
 
-            result.PriceMin ??= profile.PriceMin;
-            result.PriceMax ??= profile.PriceMax;
-            result.YearMin ??= profile.YearMin;
-            result.YearMax ??= profile.YearMax;
+            result.PriceMin ??=
+                profile.PriceMin;
+
+            result.PriceMax ??=
+                profile.PriceMax;
+
+            result.YearMin ??=
+                profile.YearMin;
+
+            result.YearMax ??=
+                profile.YearMax;
         }
 
         return _canonicalizer.Canonicalize(
@@ -118,7 +141,8 @@ public sealed class VehicleSearchCriteriaMerger
         List<string> target,
         List<string> source)
     {
-        return target.Count == 0 && source.Count > 0
+        return target.Count == 0 &&
+               source.Count > 0
             ? new List<string>(source)
             : target;
     }

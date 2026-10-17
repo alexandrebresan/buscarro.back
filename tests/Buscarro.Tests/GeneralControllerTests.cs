@@ -88,7 +88,8 @@ public sealed class GeneralControllerTests
             CancellationToken.None);
 
         Assert.Equal(
-            new ListVersionsQuery("Wrangler"),
+            new ListVersionsQuery(
+                "Wrangler"),
             mediator.LastRequest);
     }
 
@@ -219,6 +220,9 @@ public sealed class GeneralControllerTests
 
         Assert.Equal(
             [
+                "ListCountries",
+                "ListStates",
+                "ListCities",
                 "ListManufacturers",
                 "ListModels",
                 "ListVersions",
@@ -284,8 +288,11 @@ public sealed class GeneralControllerTests
             IRequest<TResponse> request,
             CancellationToken cancellationToken = default)
         {
-            LastRequest = request;
-            LastToken = cancellationToken;
+            LastRequest =
+                request;
+
+            LastToken =
+                cancellationToken;
 
             if (Failure is not null)
             {
@@ -349,6 +356,7 @@ public sealed class GeneralControllerTests
             EmptyStream<T>()
         {
             await Task.CompletedTask;
+
             yield break;
         }
 

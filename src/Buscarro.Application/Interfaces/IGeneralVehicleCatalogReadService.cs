@@ -2,6 +2,21 @@ namespace Buscarro.Application.Interfaces;
 
 public interface IGeneralVehicleCatalogReadService
 {
+    Task<IReadOnlyCollection<string>> ListCountriesAsync(
+        CancellationToken cancellationToken)
+        => Task.FromResult<IReadOnlyCollection<string>>([]);
+
+    Task<IReadOnlyCollection<string>> ListStatesAsync(
+        IReadOnlyCollection<string> countries,
+        CancellationToken cancellationToken)
+        => Task.FromResult<IReadOnlyCollection<string>>([]);
+
+    Task<IReadOnlyCollection<string>> ListCitiesAsync(
+        IReadOnlyCollection<string> countries,
+        IReadOnlyCollection<string> states,
+        CancellationToken cancellationToken)
+        => Task.FromResult<IReadOnlyCollection<string>>([]);
+
     Task<IReadOnlyCollection<string>> ListManufacturersAsync(
         CancellationToken cancellationToken);
 
