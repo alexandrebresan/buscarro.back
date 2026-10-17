@@ -15,6 +15,8 @@ public sealed class ListFuelsHandler(
         CancellationToken cancellationToken)
     {
         return catalogReadService.ListFuelsAsync(
+            request.Manufacturer,
+            request.Model,
             cancellationToken);
     }
 }

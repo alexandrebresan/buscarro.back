@@ -15,6 +15,8 @@ public sealed class ListTransmissionsHandler(
         CancellationToken cancellationToken)
     {
         return catalogReadService.ListTransmissionsAsync(
+            request.Manufacturer,
+            request.Model,
             cancellationToken);
     }
 }

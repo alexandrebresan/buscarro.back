@@ -55,28 +55,40 @@ public class GeneralController : ControllerBase
 
     [HttpGet("fuels")]
     public async Task<IActionResult> ListFuels(
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromQuery] string? manufacturer = null,
+        [FromQuery] string? model = null)
     {
         return await SendCatalogQueryAsync(
-            new ListFuelsQuery(),
+            new ListFuelsQuery(
+                manufacturer,
+                model),
             cancellationToken);
     }
 
     [HttpGet("transmissions")]
     public async Task<IActionResult> ListTransmissions(
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromQuery] string? manufacturer = null,
+        [FromQuery] string? model = null)
     {
         return await SendCatalogQueryAsync(
-            new ListTransmissionsQuery(),
+            new ListTransmissionsQuery(
+                manufacturer,
+                model),
             cancellationToken);
     }
 
     [HttpGet("colors")]
     public async Task<IActionResult> ListColors(
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromQuery] string? manufacturer = null,
+        [FromQuery] string? model = null)
     {
         return await SendCatalogQueryAsync(
-            new ListColorsQuery(),
+            new ListColorsQuery(
+                manufacturer,
+                model),
             cancellationToken);
     }
 

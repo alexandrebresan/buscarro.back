@@ -17,9 +17,27 @@ public interface IGeneralVehicleCatalogReadService
     Task<IReadOnlyCollection<string>> ListFuelsAsync(
         CancellationToken cancellationToken);
 
+    Task<IReadOnlyCollection<string>> ListFuelsAsync(
+        string? manufacturer,
+        string? model,
+        CancellationToken cancellationToken)
+        => ListFuelsAsync(cancellationToken);
+
     Task<IReadOnlyCollection<string>> ListTransmissionsAsync(
         CancellationToken cancellationToken);
 
+    Task<IReadOnlyCollection<string>> ListTransmissionsAsync(
+        string? manufacturer,
+        string? model,
+        CancellationToken cancellationToken)
+        => ListTransmissionsAsync(cancellationToken);
+
     Task<IReadOnlyCollection<string>> ListColorsAsync(
         CancellationToken cancellationToken);
+
+    Task<IReadOnlyCollection<string>> ListColorsAsync(
+        string? manufacturer,
+        string? model,
+        CancellationToken cancellationToken)
+        => ListColorsAsync(cancellationToken);
 }

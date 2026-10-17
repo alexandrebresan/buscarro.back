@@ -15,6 +15,8 @@ public sealed class ListColorsHandler(
         CancellationToken cancellationToken)
     {
         return catalogReadService.ListColorsAsync(
+            request.Manufacturer,
+            request.Model,
             cancellationToken);
     }
 }
