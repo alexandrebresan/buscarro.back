@@ -12,6 +12,10 @@ public sealed class PostgresGeneralVehicleCatalogReadService(
     NpgsqlDataSource dataSource,
     IOptions<CatalogQueryOptions> options) : IGeneralVehicleCatalogReadService
 {
+    private const string FuelColumn = "fuel";
+    private const string TransmissionColumn = "transmission";
+    private const string ColorColumn = "color";
+
     public Task<IReadOnlyCollection<string>> ListManufacturersAsync(CancellationToken cancellationToken)
         => ListNamesAsync("brand", null, null, cancellationToken);
 
@@ -20,6 +24,30 @@ public sealed class PostgresGeneralVehicleCatalogReadService(
 
     public Task<IReadOnlyCollection<string>> ListVersionsAsync(string model, string? manufacturer, CancellationToken cancellationToken)
         => ListNamesAsync("version", manufacturer, model, cancellationToken);
+
+    public Task<IReadOnlyCollection<string>> ListFuelsAsync(
+        CancellationToken cancellationToken)
+        => ListNamesAsync(
+            FuelColumn,
+            null,
+            null,
+            cancellationToken);
+
+    public Task<IReadOnlyCollection<string>> ListTransmissionsAsync(
+        CancellationToken cancellationToken)
+        => ListNamesAsync(
+            TransmissionColumn,
+            null,
+            null,
+            cancellationToken);
+
+    public Task<IReadOnlyCollection<string>> ListColorsAsync(
+        CancellationToken cancellationToken)
+        => ListNamesAsync(
+            ColorColumn,
+            null,
+            null,
+            cancellationToken);
 
     private async Task<IReadOnlyCollection<string>> ListNamesAsync(
         string column, string? manufacturer, string? model, CancellationToken cancellationToken)

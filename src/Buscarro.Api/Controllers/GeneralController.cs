@@ -22,7 +22,8 @@ public class GeneralController : ControllerBase
     }
 
     [HttpGet("manufacturers")]
-    public async Task<IActionResult> ListManufacturers(CancellationToken cancellationToken)
+    public async Task<IActionResult> ListManufacturers(
+        CancellationToken cancellationToken)
     {
         return await SendCatalogQueryAsync(
             new ListManufacturersQuery(),
@@ -46,17 +47,49 @@ public class GeneralController : ControllerBase
         CancellationToken cancellationToken)
     {
         return await SendCatalogQueryAsync(
-            new ListVersionsQuery(model, manufacturer),
+            new ListVersionsQuery(
+                model,
+                manufacturer),
             cancellationToken);
     }
 
-    private async Task<IActionResult> SendCatalogQueryAsync<TResponse>(
-        IRequest<TResponse> query,
+    [HttpGet("fuels")]
+    public async Task<IActionResult> ListFuels(
         CancellationToken cancellationToken)
+    {
+        return await SendCatalogQueryAsync(
+            new ListFuelsQuery(),
+            cancellationToken);
+    }
+
+    [HttpGet("transmissions")]
+    public async Task<IActionResult> ListTransmissions(
+        CancellationToken cancellationToken)
+    {
+        return await SendCatalogQueryAsync(
+            new ListTransmissionsQuery(),
+            cancellationToken);
+    }
+
+    [HttpGet("colors")]
+    public async Task<IActionResult> ListColors(
+        CancellationToken cancellationToken)
+    {
+        return await SendCatalogQueryAsync(
+            new ListColorsQuery(),
+            cancellationToken);
+    }
+
+    private async Task<IActionResult>
+        SendCatalogQueryAsync<TResponse>(
+            IRequest<TResponse> query,
+            CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _mediator.Send(query, cancellationToken);
+            var result = await _mediator.Send(
+                query,
+                cancellationToken);
 
             return Ok(result);
         }
@@ -66,8 +99,13 @@ public class GeneralController : ControllerBase
         }
         catch (RetryLimitExceededException ex)
         {
-            _logger.LogError(ex, "Erro ao consultar o catalogo geral no banco de dados.");
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, "Banco de dados indisponivel.");
+            _logger.LogError(
+                ex,
+                "Erro ao consultar o catalogo geral no banco de dados.");
+
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                "Banco de dados indisponivel.");
         }
     }
 }
