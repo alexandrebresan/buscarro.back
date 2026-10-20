@@ -33,6 +33,7 @@ public sealed class VehicleSearchCriteriaCanonicalizer
         ArgumentNullException.ThrowIfNull(taxonomy);
 
         ValidateRanges(source);
+        VehicleSearchAdditionalFilterValidator.ValidateMileage(source.MileageMin, source.MileageMax);
 
         var providers =
             Category(
@@ -97,7 +98,11 @@ public sealed class VehicleSearchCriteriaCanonicalizer
         return new VehicleSearchCriteria
         {
             Query = source.Query,
-            Order = source.Order,
+            Order = VehicleSearchAdditionalFilterValidator.CanonicalizeOrder(source.Order),
+            Profiles = SemanticVehicleModelCatalog.Canonicalize(source.Profiles),
+            MileageMin = source.MileageMin,
+            MileageMax = source.MileageMax,
+            Doors = VehicleSearchAdditionalFilterValidator.CanonicalizeDoors(source.Doors),
             Page = source.Page,
             Results = source.Results,
 

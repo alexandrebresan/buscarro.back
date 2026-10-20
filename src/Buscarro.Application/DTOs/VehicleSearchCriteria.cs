@@ -37,4 +37,9 @@ public sealed class VehicleSearchCriteria
     public int? YearMin { get; set; }
 
     public int? YearMax { get; set; }
+
+    public int? MileageMin { get; set; }
+    public int? MileageMax { get; set; }
+    public List<int> Doors { get; set; } = [];
+    public List<string> Profiles { get; set; } = [];
 }

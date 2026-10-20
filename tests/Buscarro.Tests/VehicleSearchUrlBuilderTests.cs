@@ -16,8 +16,7 @@ public sealed class VehicleSearchUrlBuilderTests
             {
                 Page = 5,
                 Results = 50,
-                Query = "ignorado",
-                Order = "price"
+                Query = "ignorado"
             },
             TestVehicleSearchTaxonomy.Default);
 
@@ -107,7 +106,7 @@ public sealed class VehicleSearchUrlBuilderTests
     }
 
     [Fact]
-    public void Build_excludes_pagination_query_and_order()
+    public void Build_includes_order_and_excludes_pagination_and_query()
     {
         var result = _builder.Build(
             new VehicleSearchCriteria
@@ -120,7 +119,7 @@ public sealed class VehicleSearchUrlBuilderTests
             },
             TestVehicleSearchTaxonomy.Default);
 
-        Assert.Equal("/api/vehicles?color=preto", result);
+        Assert.Equal("/api/vehicles?order=price&color=preto", result);
     }
 
     [Fact]

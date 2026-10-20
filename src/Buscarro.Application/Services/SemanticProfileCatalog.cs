@@ -8,6 +8,19 @@ public sealed class SemanticProfileCatalog
     private static readonly IReadOnlyList<SemanticProfileDefinition>
         DefaultDefinitions =
         [
+            Group("suv", ["SUV", "SUVs", "utilitário esportivo", "utilitários esportivos"]),
+            Group("sedan", ["sedan", "sedans", "sedã", "sedãs"]),
+            Group("hatch", ["hatch", "hatches", "hatchback", "hatchbacks"]),
+            Group("economic", ["econômico", "econômica", "econômicos", "econômicas", "baixo consumo", "consumo baixo", "não bebe muito"]),
+            Group("family", ["família", "famílias", "familiar", "familiares", "para filhos", "cadeirinha"]),
+            Group("fun", ["divertido", "divertida", "divertidos", "divertidas", "divertido de dirigir", "boa dirigibilidade", "bom de curva", "gostoso de dirigir"]),
+            Group("large", ["grande", "grandes", "porte grande"]),
+            new("low_mileage", ["pouco rodado", "pouco rodada", "pouco rodados", "pouco rodadas", "baixa quilometragem"],
+                _ => new VehicleSearchCriteria { MileageMax = 30_000 }),
+            new("old", ["antigo", "antiga", "antigos", "antigas"],
+                clock => new VehicleSearchCriteria { YearMax = clock.GetUtcNow().Year - 20 }),
+            new("modern", ["moderno", "moderna", "modernos", "modernas"],
+                clock => new VehicleSearchCriteria { YearMin = clock.GetUtcNow().Year - 5 }),
             new(
                 "semi_new",
                 ["seminovo", "seminova"],
@@ -26,6 +39,9 @@ public sealed class SemanticProfileCatalog
                     YearMin = 2014
                 })
         ];
+
+    private static SemanticProfileDefinition Group(string code, IReadOnlyList<string> aliases)
+        => new(code, aliases, _ => new VehicleSearchCriteria { Profiles = [code] });
 
     public SemanticProfileCatalog()
         : this(DefaultDefinitions)

@@ -15,6 +15,55 @@ public sealed class PostgresCatalogIntegrationTests
 {
     [PostgresIntegrationFact]
     [Trait("Category", "PostgreSqlIntegration")]
+    public async Task Profiles_filter_paired_models_nulls_ranges_count_and_pages_before_ordering()
+    {
+        await using var fixture = new PostgresTestDatabaseFixture();
+        await fixture.InitializeAsync();
+        await using var context = await MigratedContextAsync(fixture);
+        var provider = Provider(fixture);
+        var now = DateTimeOffset.UtcNow;
+        var generation = await AddReadyAsync(context, provider, 9, now);
+        VehicleCatalogItem Item(string id, string? brand, string? model, int? km, int? doors, decimal price)
+            => new(generation.Id, provider, id, "SUV econômico", "suv economico")
+            {
+                Brand = brand, Model = model,
+                BrandNormalized = brand is null ? null : Application.Services.VehicleCatalogSearchCriteriaNormalizer.NormalizeText(brand),
+                ModelNormalized = model is null ? null : Application.Services.VehicleCatalogSearchCriteriaNormalizer.NormalizeText(model),
+                Mileage = km, Doors = doors, Price = price
+            };
+        await using var dataSource = NpgsqlDataSource.Create(fixture.ConnectionString);
+        await new PostgresVehicleCatalogBatchWriter(dataSource).WriteBatchAsync(
+        [
+            Item("match-1", "Nissan", "Kicks", 30000, 4, 100),
+            Item("match-2", "Nissan", "Kicks", 10000, 4, 200),
+            Item("too-many-km", "Nissan", "Kicks", 30001, 4, 1),
+            Item("unknown-km", "Nissan", "Kicks", null, 4, 1),
+            Item("unknown-doors", "Nissan", "Kicks", 1, null, 1),
+            Item("wrong-doors", "Nissan", "Kicks", 1, 2, 1),
+            Item("wrong-pair", "Audi", "Kicks", 1, 4, 1),
+            Item("unknown-brand", null, "Kicks", 1, 4, 1),
+            Item("economic-hatch", "Chevrolet", "Onix", 1, 4, 1)
+        ], TestContext.Current.CancellationToken);
+        await new PostgresCatalogPublisher(context).PublishAsync(generation.Id, now.AddSeconds(1), TestContext.Current.CancellationToken);
+        var options = Options.Create(new CatalogQueryOptions { CacheSizeLimit = 100 });
+        using var cache = new CatalogQueryCache(options);
+        var service = new PostgresVehicleCatalogReadService(dataSource, cache, options);
+        var criteria = Criteria(provider, 1, 1) with { Profiles = ["suv", "economic"], MileageMax = 30000, Doors = [4], Order = "price" };
+        var first = await service.SearchAsync(criteria, TestContext.Current.CancellationToken);
+        var second = await service.SearchAsync(criteria with { Page = 2 }, TestContext.Current.CancellationToken);
+        Assert.Equal(2, first.TotalCount);
+        Assert.Equal(2, first.TotalPages);
+        Assert.Equal("match-1", Assert.Single(first.Vehicles).ExternalId);
+        Assert.Equal("match-2", Assert.Single(second.Vehicles).ExternalId);
+        var incompatible = await service.SearchAsync(criteria with { Manufacturers = ["chevrolet"] }, TestContext.Current.CancellationToken);
+        Assert.Equal(0, incompatible.TotalCount);
+        Assert.Empty(incompatible.Vehicles);
+        var unclassified = await service.SearchAsync(Criteria(provider, 1, 20) with { Models = ["kicks"], Manufacturers = ["audi"] }, TestContext.Current.CancellationToken);
+        Assert.Equal("wrong-pair", Assert.Single(unclassified.Vehicles).ExternalId);
+    }
+
+    [PostgresIntegrationFact]
+    [Trait("Category", "PostgreSqlIntegration")]
     public async Task Versioned_catalog_migration_applies_required_checks_and_gin_index()
     {
         await using var fixture=new PostgresTestDatabaseFixture();

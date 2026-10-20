@@ -9,6 +9,28 @@ namespace Buscarro.Tests;
 
 public sealed class AiPromptInterpreterTests
 {
+    [Theory]
+    [InlineData("Carro com menos de 50 mil km", "{\"mileageMax\":49999}", 49999, null)]
+    [InlineData("Quero os carros mais baratos", "{\"order\":\"price\"}", null, "price")]
+    [InlineData("quero um carro 2/4 portas", "{\"doors\":[2,4]}", null, null)]
+    public async Task InterpretAsync_maps_new_objective_fields_and_describes_them_in_schema(
+        string prompt, string json, int? mileageMax, string? order)
+    {
+        var handler = new RecordingHttpMessageHandler(CreateOpenAiResponse(json));
+        var result = await CreateInterpreter(handler).InterpretAsync(prompt, TestVehicleSearchTaxonomy.Default, CancellationToken.None);
+        Assert.Equal(mileageMax, result.MileageMax);
+        Assert.Equal(order, result.Order);
+        if (prompt.Contains("portas")) Assert.Equal([2, 4], result.Doors);
+        using var body = JsonDocument.Parse(handler.RequestBody!);
+        var schema = body.RootElement.GetProperty("response_format").GetProperty("json_schema").GetProperty("schema");
+        var properties = schema.GetProperty("properties");
+        Assert.Equal("integer", properties.GetProperty("doors").GetProperty("items").GetProperty("type").GetString());
+        Assert.Contains("price", properties.GetProperty("order").GetProperty("enum").EnumerateArray().Select(value => value.GetString()));
+        var instructions = body.RootElement.GetProperty("messages")[0].GetProperty("content").GetString()!;
+        Assert.Contains("49999", instructions);
+        Assert.Contains("quilômetros", instructions);
+    }
+
     [Fact]
     public async Task InterpretAsync_returns_the_structured_criteria()
     {
@@ -142,7 +164,11 @@ public sealed class AiPromptInterpreterTests
                 "priceMin",
                 "priceMax",
                 "yearMin",
-                "yearMax"
+                "yearMax",
+                "mileageMin",
+                "mileageMax",
+                "doors",
+                "order"
             },
             schema
                 .GetProperty("required")

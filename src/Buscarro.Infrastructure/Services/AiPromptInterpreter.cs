@@ -21,7 +21,16 @@ public sealed class AiPromptInterpreter
 
         Não converta intenções subjetivas em filtros; perfis são tratados fora do modelo.
 
-        Todos os dez filtros categóricos são arrays.
+        Os filtros categóricos são arrays; doors é um array de inteiros.
+        Extraia mileageMin e mileageMax em quilômetros. Ausentes são null.
+        "menos de 50 mil km" => mileageMax: 49999; "até 50 mil km" => mileageMax: 50000.
+        "2/4 portas" ou "2 ou 4 portas" => doors: [2, 4]. Ausente => [].
+        Para order use price (mais baratos), price-inverse (mais caros),
+        year (mais antigos), year-inverse (mais novos ou mais modernos), mileage (menos rodados)
+        ou mileage-inverse (mais rodados). Ausente => null.
+        Não transforme um critério negado em filtro positivo.
+
+        Todos os dez filtros categóricos textuais são arrays.
 
         Use [] quando ausentes e no máximo 20 valores.
 
@@ -43,7 +52,7 @@ public sealed class AiPromptInterpreter
 
         Não invente valores.
 
-        Use null somente para ranges ausentes.
+        Use null para ranges e order ausentes.
 
         Exemplo:
         Fiat ou Honda branco ou cinza
@@ -298,7 +307,15 @@ public sealed class AiPromptInterpreter
                         NullableIntegerSchema,
 
                     yearMax =
-                        NullableIntegerSchema
+                        NullableIntegerSchema,
+                    mileageMin = NullableIntegerSchema,
+                    mileageMax = NullableIntegerSchema,
+                    doors = new { type = "array", items = new { type = "integer", minimum = 1, maximum = 6 } },
+                    order = new
+                    {
+                        type = new[] { "string", "null" },
+                        @enum = new string?[] { null, "price", "price-inverse", "year", "year-inverse", "mileage", "mileage-inverse" }
+                    }
                 },
 
             required =
@@ -317,7 +334,11 @@ public sealed class AiPromptInterpreter
                     "priceMin",
                     "priceMax",
                     "yearMin",
-                    "yearMax"
+                    "yearMax",
+                    "mileageMin",
+                    "mileageMax",
+                    "doors",
+                    "order"
                 },
 
             additionalProperties =

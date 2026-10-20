@@ -13,6 +13,7 @@ public sealed partial class VersionedConfigurationSecurityTests
             .EnumerateFiles(repositoryRoot, "appsettings*.json", SearchOption.AllDirectories)
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}.worktrees{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .ToArray();
 
         Assert.NotEmpty(appsettingsFiles);

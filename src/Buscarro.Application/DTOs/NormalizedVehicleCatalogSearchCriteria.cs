@@ -20,6 +20,11 @@ public sealed record NormalizedVehicleCatalogSearchCriteria(
     int Page,
     int PageSize)
 {
+    public int? MileageMin { get; init; }
+    public int? MileageMax { get; init; }
+    public IReadOnlyList<int> Doors { get; init; } = [];
+    public IReadOnlyList<string> Profiles { get; init; } = [];
+
     // Compatibilidade com o construtor anterior,
     // utilizado por testes e possíveis chamadas antigas.
     //

@@ -37,6 +37,13 @@ public sealed class VehicleSearchUrlBuilder
         var parameters =
             new List<KeyValuePair<string, string>>();
 
+        Add(parameters, "profile", criteria.Profiles);
+        Add(parameters, "mileageMin", criteria.MileageMin);
+        Add(parameters, "mileageMax", criteria.MileageMax);
+        foreach (var doors in criteria.Doors) Add(parameters, "doors", (int?)doors);
+        if (criteria.Order is not null)
+            parameters.Add(new("order", criteria.Order));
+
         Add(
             parameters,
             "provider",

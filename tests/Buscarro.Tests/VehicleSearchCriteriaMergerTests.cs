@@ -254,6 +254,10 @@ public sealed class VehicleSearchCriteriaMergerTests
             nameof(VehicleSearchCriteria.PriceMin),
             nameof(VehicleSearchCriteria.Query),
             nameof(VehicleSearchCriteria.YearMax),
+            nameof(VehicleSearchCriteria.MileageMin),
+            nameof(VehicleSearchCriteria.MileageMax),
+            nameof(VehicleSearchCriteria.Doors),
+            nameof(VehicleSearchCriteria.Profiles),
             nameof(VehicleSearchCriteria.YearMin)
         ];
 

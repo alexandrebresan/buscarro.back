@@ -194,6 +194,10 @@ public sealed class CatalogQueryCache : IDisposable
             new
             {
                 criteria.Query,
+                criteria.Profiles,
+                criteria.MileageMin,
+                criteria.MileageMax,
+                criteria.Doors,
 
                 criteria.Providers,
 

@@ -1,0 +1,2906 @@
+[
+  {
+    "Brand": "Audi",
+    "Model": "A1",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Audi",
+    "Model": "A3",
+    "Profiles": [
+      "sedan",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Audi",
+    "Model": "A4",
+    "Profiles": [
+      "sedan",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Audi",
+    "Model": "A5",
+    "Profiles": [
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Audi",
+    "Model": "A6",
+    "Profiles": [
+      "sedan",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Audi",
+    "Model": "A7",
+    "Profiles": [
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Audi",
+    "Model": "e-tron",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Audi",
+    "Model": "Q3",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Audi",
+    "Model": "Q4 e-tron",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Audi",
+    "Model": "Q5",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Audi",
+    "Model": "Q7",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Audi",
+    "Model": "Q8",
+    "Profiles": [
+      "family",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Audi",
+    "Model": "RS 3",
+    "Profiles": [
+      "sedan",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Audi",
+    "Model": "RS Q8",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Audi",
+    "Model": "TT",
+    "Profiles": [
+      "fun"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "118i",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "120i",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "320i",
+    "Profiles": [
+      "sedan",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "330e",
+    "Profiles": [
+      "sedan",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "530e",
+    "Profiles": [
+      "sedan",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "iX",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "iX1",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "M3",
+    "Profiles": [
+      "sedan",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "X1",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "X2",
+    "Profiles": [
+      "family",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "X3",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "X4",
+    "Profiles": [
+      "family",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "X5",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "X6",
+    "Profiles": [
+      "family",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "BMW",
+    "Model": "X7",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "BYD",
+    "Model": "Dolphin",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "BYD",
+    "Model": "Dolphin Mini",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "BYD",
+    "Model": "Han",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "large"
+    ]
+  },
+  {
+    "Brand": "BYD",
+    "Model": "King",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "BYD",
+    "Model": "Seal",
+    "Profiles": [
+      "sedan",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "BYD",
+    "Model": "Song Plus",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "BYD",
+    "Model": "Song Pro",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "BYD",
+    "Model": "Tan",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "BYD",
+    "Model": "Yuan Plus",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "BYD",
+    "Model": "Yuan Pro",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "CAOA Chery",
+    "Model": "Arrizo 5",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "CAOA Chery",
+    "Model": "Arrizo 6",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "CAOA Chery",
+    "Model": "Celer",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "CAOA Chery",
+    "Model": "iCar",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "CAOA Chery",
+    "Model": "QQ",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "CAOA Chery",
+    "Model": "Tiggo 2",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "CAOA Chery",
+    "Model": "Tiggo 3X",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "CAOA Chery",
+    "Model": "Tiggo 5X",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "CAOA Chery",
+    "Model": "Tiggo 7",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "CAOA Chery",
+    "Model": "Tiggo 8",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Agile",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Astra",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Camaro",
+    "Profiles": [
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Captiva",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Celta",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Classic",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Cobalt",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Corsa",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Cruze",
+    "Profiles": [
+      "sedan",
+      "family",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Equinox",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Meriva",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Onix",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Onix Plus",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Prisma",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Spin",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Tracker",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Trailblazer",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Vectra",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Chevrolet",
+    "Model": "Zafira",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Chrysler",
+    "Model": "300C",
+    "Profiles": [
+      "sedan",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Chrysler",
+    "Model": "PT Cruiser",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Chrysler",
+    "Model": "Town & Country",
+    "Profiles": [
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Citroën",
+    "Model": "Aircross",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Citroën",
+    "Model": "Basalt",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Citroën",
+    "Model": "Berlingo",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Citroën",
+    "Model": "C3",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Citroën",
+    "Model": "C3 Aircross",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Citroën",
+    "Model": "C3 Picasso",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Citroën",
+    "Model": "C4 Cactus",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Citroën",
+    "Model": "C4 Lounge",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Citroën",
+    "Model": "C4 Pallas",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Citroën",
+    "Model": "C4 VTR",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Citroën",
+    "Model": "C5",
+    "Profiles": [
+      "sedan",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Citroën",
+    "Model": "Xsara Picasso",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Dodge",
+    "Model": "Challenger",
+    "Profiles": [
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Dodge",
+    "Model": "Charger",
+    "Profiles": [
+      "sedan",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Dodge",
+    "Model": "Durango",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Dodge",
+    "Model": "Journey",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "500",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Argo",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Bravo",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Cronos",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Doblò",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Fastback",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Freemont",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Grand Siena",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Idea",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Linea",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Mobi",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Palio",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Pulse",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Punto",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Siena",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Fiat",
+    "Model": "Uno",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Ford",
+    "Model": "Bronco Sport",
+    "Profiles": [
+      "suv"
+    ]
+  },
+  {
+    "Brand": "Ford",
+    "Model": "EcoSport",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Ford",
+    "Model": "Edge",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Ford",
+    "Model": "Escort",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Ford",
+    "Model": "F-150",
+    "Profiles": [
+      "large"
+    ]
+  },
+  {
+    "Brand": "Ford",
+    "Model": "Fiesta",
+    "Profiles": [
+      "hatch",
+      "economic",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Ford",
+    "Model": "Focus",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Ford",
+    "Model": "Fusion",
+    "Profiles": [
+      "sedan",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Ford",
+    "Model": "Ka",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Ford",
+    "Model": "Ka Sedan",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Ford",
+    "Model": "Mondeo",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Ford",
+    "Model": "Mustang",
+    "Profiles": [
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Ford",
+    "Model": "Territory",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Ford",
+    "Model": "Transit",
+    "Profiles": [
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "GAC",
+    "Model": "Aion V",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "GAC",
+    "Model": "Aion Y",
+    "Profiles": [
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "GAC",
+    "Model": "GS4",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "GAC",
+    "Model": "Hyptec HT",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Geely",
+    "Model": "EX5",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Geely",
+    "Model": "Geometry C",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "GWM",
+    "Model": "Haval H6",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "GWM",
+    "Model": "Haval H6 GT",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "GWM",
+    "Model": "Haval H7",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "GWM",
+    "Model": "Haval H9",
+    "Profiles": [
+      "suv",
+      "large"
+    ]
+  },
+  {
+    "Brand": "GWM",
+    "Model": "Ora 03",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "GWM",
+    "Model": "Tank 300",
+    "Profiles": [
+      "suv"
+    ]
+  },
+  {
+    "Brand": "Honda",
+    "Model": "Accord",
+    "Profiles": [
+      "sedan",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Honda",
+    "Model": "City",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Honda",
+    "Model": "City Hatchback",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Honda",
+    "Model": "Civic",
+    "Profiles": [
+      "sedan",
+      "family",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Honda",
+    "Model": "Civic Type R",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Honda",
+    "Model": "CR-V",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Honda",
+    "Model": "CR-Z",
+    "Profiles": [
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Honda",
+    "Model": "Fit",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Honda",
+    "Model": "HR-V",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Honda",
+    "Model": "Prelude",
+    "Profiles": [
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Honda",
+    "Model": "WR-V",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Honda",
+    "Model": "ZR-V",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Hyundai",
+    "Model": "Azera",
+    "Profiles": [
+      "sedan",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Hyundai",
+    "Model": "Creta",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Hyundai",
+    "Model": "Elantra",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Hyundai",
+    "Model": "HB20",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Hyundai",
+    "Model": "HB20S",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Hyundai",
+    "Model": "i30",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Hyundai",
+    "Model": "Ioniq 5",
+    "Profiles": [
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Hyundai",
+    "Model": "ix35",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Hyundai",
+    "Model": "Kona Hybrid",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Hyundai",
+    "Model": "Santa Fe",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Hyundai",
+    "Model": "Sonata",
+    "Profiles": [
+      "sedan",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Hyundai",
+    "Model": "Tucson",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Hyundai",
+    "Model": "Veloster",
+    "Profiles": [
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Hyundai",
+    "Model": "Veracruz",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "JAC",
+    "Model": "E-JS1",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "JAC",
+    "Model": "iEV40",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "JAC",
+    "Model": "J2",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "JAC",
+    "Model": "J3",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "JAC",
+    "Model": "J5",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "JAC",
+    "Model": "J6",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "JAC",
+    "Model": "T40",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "JAC",
+    "Model": "T50",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "JAC",
+    "Model": "T60",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "JAC",
+    "Model": "T80",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Jeep",
+    "Model": "Cherokee",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Jeep",
+    "Model": "Commander",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Jeep",
+    "Model": "Compass",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Jeep",
+    "Model": "Grand Cherokee",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Jeep",
+    "Model": "Renegade",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Jeep",
+    "Model": "Wrangler",
+    "Profiles": [
+      "suv"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "Bongo",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "Cadenza",
+    "Profiles": [
+      "sedan",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "Carnival",
+    "Profiles": [
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "Cerato",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "EV5",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "EV9",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "Mohave",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "Niro",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "Optima",
+    "Profiles": [
+      "sedan",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "Picanto",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "Rio",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "Sorento",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "Soul",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "Sportage",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "Stinger",
+    "Profiles": [
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Kia",
+    "Model": "Stonic",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Land Rover",
+    "Model": "Defender",
+    "Profiles": [
+      "suv",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Land Rover",
+    "Model": "Discovery",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Land Rover",
+    "Model": "Discovery Sport",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Land Rover",
+    "Model": "Freelander 2",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Land Rover",
+    "Model": "Range Rover",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Land Rover",
+    "Model": "Range Rover Evoque",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Land Rover",
+    "Model": "Range Rover Sport",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Land Rover",
+    "Model": "Range Rover Velar",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Leapmotor",
+    "Model": "B10",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Leapmotor",
+    "Model": "C10",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Lexus",
+    "Model": "CT 200h",
+    "Profiles": [
+      "hatch",
+      "economic",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Lexus",
+    "Model": "ES 300h",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Lexus",
+    "Model": "IS 300",
+    "Profiles": [
+      "sedan",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Lexus",
+    "Model": "NX 300",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Lexus",
+    "Model": "NX 350h",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Lexus",
+    "Model": "RX 350h",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Lexus",
+    "Model": "UX 250h",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Mahindra",
+    "Model": "Goa",
+    "Profiles": [
+      "suv"
+    ]
+  },
+  {
+    "Brand": "Mahindra",
+    "Model": "Scorpio",
+    "Profiles": [
+      "suv"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "A 200",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "C 180",
+    "Profiles": [
+      "sedan",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "C 200",
+    "Profiles": [
+      "sedan",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "C 300",
+    "Profiles": [
+      "sedan",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "CLA",
+    "Profiles": [
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "E 250",
+    "Profiles": [
+      "sedan",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "E 300",
+    "Profiles": [
+      "sedan",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "EQB",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "EQE SUV",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "GLA 200",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "GLB 200",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "GLC",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "GLE",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "GLS",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Mercedes-Benz",
+    "Model": "S 500",
+    "Profiles": [
+      "sedan",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "MINI",
+    "Model": "Clubman",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "MINI",
+    "Model": "Cooper",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "MINI",
+    "Model": "Cooper S",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "MINI",
+    "Model": "Countryman",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "MINI",
+    "Model": "Paceman",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Mitsubishi",
+    "Model": "Airtrek",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Mitsubishi",
+    "Model": "ASX",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Mitsubishi",
+    "Model": "Eclipse Cross",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Mitsubishi",
+    "Model": "Lancer",
+    "Profiles": [
+      "sedan",
+      "family",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Mitsubishi",
+    "Model": "Outlander",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Mitsubishi",
+    "Model": "Pajero Dakar",
+    "Profiles": [
+      "suv",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Mitsubishi",
+    "Model": "Pajero Full",
+    "Profiles": [
+      "suv",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Mitsubishi",
+    "Model": "Pajero Sport",
+    "Profiles": [
+      "suv",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Mitsubishi",
+    "Model": "Pajero TR4",
+    "Profiles": [
+      "suv"
+    ]
+  },
+  {
+    "Brand": "Nissan",
+    "Model": "Altima",
+    "Profiles": [
+      "sedan",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Nissan",
+    "Model": "Grand Livina",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Nissan",
+    "Model": "GT-R",
+    "Profiles": [
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Nissan",
+    "Model": "Kicks",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Nissan",
+    "Model": "Kicks Play",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Nissan",
+    "Model": "Leaf",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Nissan",
+    "Model": "Livina",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Nissan",
+    "Model": "March",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Nissan",
+    "Model": "Pathfinder",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Nissan",
+    "Model": "Sentra",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Nissan",
+    "Model": "Tiida",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Nissan",
+    "Model": "Versa",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Nissan",
+    "Model": "X-Trail",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Omoda Jaecoo",
+    "Model": "Jaecoo 5",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Omoda Jaecoo",
+    "Model": "Jaecoo 7",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Omoda Jaecoo",
+    "Model": "Omoda 5",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Omoda Jaecoo",
+    "Model": "Omoda E5",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Peugeot",
+    "Model": "2008",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Peugeot",
+    "Model": "206",
+    "Profiles": [
+      "hatch",
+      "economic",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Peugeot",
+    "Model": "207",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Peugeot",
+    "Model": "208",
+    "Profiles": [
+      "hatch",
+      "economic",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Peugeot",
+    "Model": "3008",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Peugeot",
+    "Model": "307",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Peugeot",
+    "Model": "308",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Peugeot",
+    "Model": "408",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Peugeot",
+    "Model": "508",
+    "Profiles": [
+      "sedan",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Peugeot",
+    "Model": "Partner",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Peugeot",
+    "Model": "RCZ",
+    "Profiles": [
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Porsche",
+    "Model": "718 Boxster",
+    "Profiles": [
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Porsche",
+    "Model": "718 Cayman",
+    "Profiles": [
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Porsche",
+    "Model": "911",
+    "Profiles": [
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Porsche",
+    "Model": "Cayenne",
+    "Profiles": [
+      "suv",
+      "family",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Porsche",
+    "Model": "Macan",
+    "Profiles": [
+      "suv",
+      "family",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Porsche",
+    "Model": "Panamera",
+    "Profiles": [
+      "sedan",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Porsche",
+    "Model": "Taycan",
+    "Profiles": [
+      "sedan",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "RAM",
+    "Model": "1500",
+    "Profiles": [
+      "large"
+    ]
+  },
+  {
+    "Brand": "RAM",
+    "Model": "2500",
+    "Profiles": [
+      "large"
+    ]
+  },
+  {
+    "Brand": "RAM",
+    "Model": "3500",
+    "Profiles": [
+      "large"
+    ]
+  },
+  {
+    "Brand": "RAM",
+    "Model": "Classic",
+    "Profiles": [
+      "large"
+    ]
+  },
+  {
+    "Brand": "Renault",
+    "Model": "Captur",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Renault",
+    "Model": "Clio",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Renault",
+    "Model": "Duster",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Renault",
+    "Model": "Fluence",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Renault",
+    "Model": "Kangoo",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Renault",
+    "Model": "Kardian",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Renault",
+    "Model": "Koleos",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Renault",
+    "Model": "Kwid",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Renault",
+    "Model": "Logan",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Renault",
+    "Model": "Mégane",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Renault",
+    "Model": "Sandero",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Renault",
+    "Model": "Scénic",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Renault",
+    "Model": "Stepway",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Renault",
+    "Model": "Zoe",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "SsangYong",
+    "Model": "Actyon",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "SsangYong",
+    "Model": "Korando",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "SsangYong",
+    "Model": "Kyron",
+    "Profiles": [
+      "suv"
+    ]
+  },
+  {
+    "Brand": "SsangYong",
+    "Model": "Rexton",
+    "Profiles": [
+      "suv",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Subaru",
+    "Model": "Forester",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Subaru",
+    "Model": "Impreza",
+    "Profiles": [
+      "sedan",
+      "family",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Subaru",
+    "Model": "Legacy",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Subaru",
+    "Model": "Outback",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Subaru",
+    "Model": "Tribeca",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Subaru",
+    "Model": "WRX",
+    "Profiles": [
+      "sedan",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Subaru",
+    "Model": "XV",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Suzuki",
+    "Model": "Grand Vitara",
+    "Profiles": [
+      "suv"
+    ]
+  },
+  {
+    "Brand": "Suzuki",
+    "Model": "Ignis",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Suzuki",
+    "Model": "Jimny",
+    "Profiles": [
+      "suv"
+    ]
+  },
+  {
+    "Brand": "Suzuki",
+    "Model": "Jimny Sierra",
+    "Profiles": [
+      "suv"
+    ]
+  },
+  {
+    "Brand": "Suzuki",
+    "Model": "S-Cross",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Suzuki",
+    "Model": "Swift",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Suzuki",
+    "Model": "SX4",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Suzuki",
+    "Model": "Vitara",
+    "Profiles": [
+      "suv",
+      "family",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Toyota",
+    "Model": "Camry",
+    "Profiles": [
+      "sedan",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Toyota",
+    "Model": "Corolla",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Toyota",
+    "Model": "Corolla Cross",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Toyota",
+    "Model": "Etios Hatch",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Toyota",
+    "Model": "Etios Sedan",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Toyota",
+    "Model": "Fielder",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Toyota",
+    "Model": "GR Corolla",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Toyota",
+    "Model": "Land Cruiser Prado",
+    "Profiles": [
+      "suv",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Toyota",
+    "Model": "Prius",
+    "Profiles": [
+      "hatch",
+      "economic",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Toyota",
+    "Model": "RAV4",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Toyota",
+    "Model": "SW4",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Toyota",
+    "Model": "Yaris Hatch",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Toyota",
+    "Model": "Yaris Sedan",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Troller",
+    "Model": "T4",
+    "Profiles": [
+      "suv"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Bora",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "CrossFox",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Fox",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Gol",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Golf",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Jetta",
+    "Profiles": [
+      "sedan",
+      "family",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Nivus",
+    "Profiles": [
+      "family",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Parati",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Passat",
+    "Profiles": [
+      "sedan",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Polo",
+    "Profiles": [
+      "hatch",
+      "economic",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Santana",
+    "Profiles": [
+      "sedan",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "SpaceFox",
+    "Profiles": [
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "T-Cross",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Taos",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Tera",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Tiguan",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Touareg",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "up!",
+    "Profiles": [
+      "hatch",
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Virtus",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volkswagen",
+    "Model": "Voyage",
+    "Profiles": [
+      "sedan",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volvo",
+    "Model": "C30",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Volvo",
+    "Model": "C40",
+    "Profiles": [
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volvo",
+    "Model": "EX30",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volvo",
+    "Model": "EX40",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volvo",
+    "Model": "S60",
+    "Profiles": [
+      "sedan",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Volvo",
+    "Model": "S90",
+    "Profiles": [
+      "sedan",
+      "fun",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Volvo",
+    "Model": "V40",
+    "Profiles": [
+      "hatch",
+      "fun"
+    ]
+  },
+  {
+    "Brand": "Volvo",
+    "Model": "XC40",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volvo",
+    "Model": "XC60",
+    "Profiles": [
+      "suv",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Volvo",
+    "Model": "XC90",
+    "Profiles": [
+      "suv",
+      "family",
+      "large"
+    ]
+  },
+  {
+    "Brand": "Zeekr",
+    "Model": "001",
+    "Profiles": [
+      "economic"
+    ]
+  },
+  {
+    "Brand": "Zeekr",
+    "Model": "7X",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  },
+  {
+    "Brand": "Zeekr",
+    "Model": "X",
+    "Profiles": [
+      "suv",
+      "economic",
+      "family"
+    ]
+  }
+]

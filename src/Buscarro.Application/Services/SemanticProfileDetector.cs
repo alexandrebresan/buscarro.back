@@ -9,6 +9,7 @@ namespace Buscarro.Application.Services;
 
 public sealed partial class SemanticProfileDetector : ISemanticProfileDetector
 {
+    private static readonly VehicleSearchPromptContentAnalyzer PromptContentAnalyzer = new();
     private readonly SemanticProfileCatalog _catalog;
 
     public SemanticProfileDetector(SemanticProfileCatalog catalog)
@@ -78,7 +79,9 @@ public sealed partial class SemanticProfileDetector : ISemanticProfileDetector
                         prompt,
                         normalizedPrompt.OriginalEnds[normalizedEnd]);
 
-                    if (HasBoundary(prompt, start, end))
+                    if (HasBoundary(prompt, start, end) &&
+                        !IsNegated(prompt, start) &&
+                        IsProfileContext(definition.Code, prompt, start))
                     {
                         candidates.Add(new ProfileMatch(
                             definition.Code,
@@ -93,6 +96,38 @@ public sealed partial class SemanticProfileDetector : ISemanticProfileDetector
         }
 
         return candidates;
+    }
+
+    private static bool IsNegated(string prompt, int start)
+    {
+        // Leave negated text intact for the interpreter; it must never activate
+        // a positive profile. Restrict the scope to the immediately preceding phrase.
+        var prefix = string.Join(' ', SemanticProfileTextNormalizer.GetTerms(prompt[..start]));
+        return NegatedPrefixRegex().IsMatch(prefix);
+    }
+
+    [GeneratedRegex(@"(?:^| )(?:nao|nem|sem|exceto)(?: (?:quero|queria|procuro|busco|preciso|precisa|desejo|de|do|da|um|uma|o|a|ser|que|seja|necessariamente|apenas|somente|carro|carros|veiculo|veiculos|suv|sedan|hatch))*$", RegexOptions.CultureInvariant)]
+    private static partial Regex NegatedPrefixRegex();
+
+    private static bool IsProfileContext(string code, string prompt, int start)
+    {
+        var prefix = SemanticProfileTextNormalizer.GetTerms(prompt[..start]);
+        // Comparatives express ordering and must remain available to the AI.
+        if (code is "old" or "modern" && prefix.LastOrDefault() is "mais" or "menos")
+            return false;
+        if (code != "large") return true;
+
+        // "Grande" alone is ambiguous. A vehicle noun establishes size context;
+        // a later location preposition establishes locality context instead.
+        // This preserves Campo Grande, Rio Grande do Sul, Grande São Paulo, etc.
+        foreach (var term in prefix.Reverse())
+        {
+            if (term is "em" or "no" or "na" or "nos" or "nas") return false;
+            if (term is "carro" or "carros" or "veiculo" or "veiculos" or "porte" or
+                "suv" or "suvs" or "sedan" or "sedans" or "seda" or "sedas" or
+                "hatch" or "hatches" or "picape" or "familia") return true;
+        }
+        return !PromptContentAnalyzer.HasMeaningfulTerms(prompt[..start]);
     }
 
     private static List<ProfileMatch> SelectLongestNonOverlapping(

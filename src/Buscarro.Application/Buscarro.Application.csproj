@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\Buscarro.Domain\Buscarro.Domain.csproj" />
@@ -7,6 +7,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.11" />
     <PackageReference Include="MediatR" Version="12.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources/SemanticVehicleModels.json" />
   </ItemGroup>
 
   <PropertyGroup>

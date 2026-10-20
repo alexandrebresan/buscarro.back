@@ -55,6 +55,9 @@ public sealed class VehicleSearchCriteriaMerger
                 explicitCriteria,
                 taxonomy);
 
+        var explicitMileage = explicitCriteria.MileageMin.HasValue || explicitCriteria.MileageMax.HasValue;
+        var explicitYear = explicitCriteria.YearMin.HasValue || explicitCriteria.YearMax.HasValue;
+
         foreach (var code in profileCodes)
         {
             var definition =
@@ -125,11 +128,18 @@ public sealed class VehicleSearchCriteriaMerger
             result.PriceMax ??=
                 profile.PriceMax;
 
-            result.YearMin ??=
-                profile.YearMin;
-
-            result.YearMax ??=
-                profile.YearMax;
+            result.Profiles = result.Profiles.Union(profile.Profiles, StringComparer.Ordinal).ToList();
+            result.Doors = result.Doors.Count == 0 ? new(profile.Doors) : result.Doors;
+            if (!explicitMileage)
+            {
+                result.MileageMin ??= profile.MileageMin;
+                result.MileageMax ??= profile.MileageMax;
+            }
+            if (!explicitYear)
+            {
+                result.YearMin ??= profile.YearMin;
+                result.YearMax ??= profile.YearMax;
+            }
         }
 
         return _canonicalizer.Canonicalize(

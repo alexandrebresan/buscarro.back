@@ -14,6 +14,10 @@ public sealed class VehicleCatalogSearchCriteriaNormalizer
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        VehicleSearchAdditionalFilterValidator.ValidateMileage(request.MileageMin, request.MileageMax);
+        var profiles = SemanticVehicleModelCatalog.Canonicalize(request.Profile);
+        var doors = VehicleSearchAdditionalFilterValidator.CanonicalizeDoors(request.Doors);
+
         var pageSize = ResolvePageSize(
             request.PageSize,
             request.Results);
@@ -151,7 +155,13 @@ public sealed class VehicleCatalogSearchCriteriaNormalizer
 
             order,
             request.Page,
-            pageSize);
+            pageSize)
+        {
+            Profiles = profiles,
+            MileageMin = request.MileageMin,
+            MileageMax = request.MileageMax,
+            Doors = doors
+        };
     }
 
     public static string NormalizeText(

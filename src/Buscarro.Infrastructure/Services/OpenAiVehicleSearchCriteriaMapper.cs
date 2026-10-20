@@ -84,6 +84,11 @@ public sealed class OpenAiVehicleSearchCriteriaMapper(
                 Fuels =
                     Copy(contract.Fuels),
 
+                MileageMin = contract.MileageMin,
+                MileageMax = contract.MileageMax,
+                Doors = contract.Doors?.ToList() ?? [],
+                Order = contract.Order,
+
                 PriceMin =
                     contract.PriceMin,
 

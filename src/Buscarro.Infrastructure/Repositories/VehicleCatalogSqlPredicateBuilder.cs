@@ -1,4 +1,5 @@
 using Buscarro.Application.DTOs;
+using Buscarro.Application.Services;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -26,6 +27,23 @@ internal sealed class VehicleCatalogSqlPredicateBuilder
         AddRange("v.price", "price_max", criteria.PriceMax, "<=", clauses, parameters);
         AddRange("v.year", "year_min", criteria.YearMin, ">=", clauses, parameters);
         AddRange("v.year", "year_max", criteria.YearMax, "<=", clauses, parameters);
+        AddRange("v.mileage", "mileage_min", criteria.MileageMin, ">=", clauses, parameters);
+        AddRange("v.mileage", "mileage_max", criteria.MileageMax, "<=", clauses, parameters);
+        if (criteria.Doors.Count > 0)
+        {
+            clauses.Add("v.doors = ANY(@doors)");
+            parameters.Add(new("doors", NpgsqlDbType.Array | NpgsqlDbType.Integer) { Value = criteria.Doors.ToArray() });
+        }
+        foreach (var code in criteria.Profiles)
+        {
+            var models = SemanticVehicleModelCatalog.GetRequired(code);
+            var index = clauses.Count;
+            var brandsParameter = $"profile_brands_{index}";
+            var modelsParameter = $"profile_models_{index}";
+            clauses.Add($"EXISTS (SELECT 1 FROM unnest(@{brandsParameter}::text[], @{modelsParameter}::text[]) AS p(brand, model) WHERE v.brand_normalized = p.brand AND v.model_normalized = p.model)");
+            parameters.Add(new(brandsParameter, NpgsqlDbType.Array | NpgsqlDbType.Text) { Value = models.Select(model => model.Brand).ToArray() });
+            parameters.Add(new(modelsParameter, NpgsqlDbType.Array | NpgsqlDbType.Text) { Value = models.Select(model => model.Model).ToArray() });
+        }
         if (criteria.Query is not null)
         {
             clauses.Add("v.search_vector @@ websearch_to_tsquery('simple', @query_normalized)");

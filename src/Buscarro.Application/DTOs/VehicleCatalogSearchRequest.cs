@@ -32,6 +32,11 @@ public sealed class VehicleCatalogSearchRequest
 
     public int? YearMax { get; set; }
 
+    public int? MileageMin { get; set; }
+    public int? MileageMax { get; set; }
+    public List<int> Doors { get; set; } = [];
+    public List<string> Profile { get; set; } = [];
+
     public string? Order { get; set; }
 
     public int Page { get; set; } = 1;
