@@ -6,6 +6,10 @@ O projeto segue Clean Architecture, CQRS e MediatR:
 
 Autenticacao com JWT, refresh token e Google. Configure `Jwt__Issuer`, `Jwt__Audience`, `Jwt__Secret` (minimo 32 bytes), `Google__ClientId` e as origens exatas em `Auth__AllowedOrigins__0` e `Cors__AllowedOrigins__0`. Fora de Development, a API exige certificado PFX com chave privada para Data Protection e a senha correspondente. Use ambiente ou secret store; veja os nomes de configuracao no [exemplo da API](deploy/aws/api.env.example), sem publicar credenciais.
 
+A unica origem permitida do front-end e `https://www.buscarro.app`. Na AWS, configure `Auth__AllowedOrigins__0` e `Cors__AllowedOrigins__0` com essa URL no `api.env` existente e remova indices adicionais antigos (`__1`, `__2`, etc.), se houver. Recrie o container da API (`sudo docker compose up -d --force-recreate api`, na pasta de deploy). Alterar apenas o exemplo ou o appsettings nao atualiza o ambiente publicado; variaveis de ambiente sobrescrevem os indices correspondentes do JSON. No desenvolvimento local, remova tambem origens antigas de User Secrets ou de outras configuracoes que sobrescrevam essas listas.
+
+Cookies de autenticacao e CSRF usam `SameSite=Lax`. Sites diferentes como `www.buscarro.app` e `buscarro.duckdns.org` nao enviam esses cookies em chamadas fetch entre si apenas por autorizar CORS. Para manter essa politica, a API pode ser publicada em HTTPS sob `api.buscarro.app`, continuando na AWS enquanto o front permanece na Vercel. Isso requer configuracao de DNS, proxy/TLS e URL da API no front, alem de `credentials: "include"` e token CSRF. O cadastro de origem acima nao altera esses componentes nem confirma a causa de um 403 observado no navegador.
+
 - `src/Buscarro.Api`: controllers, configuracoes e entrada HTTP.
 - `src/Buscarro.Application`: commands, queries, handlers, DTOs e interfaces de aplicacao.
 - `src/Buscarro.Domain`: entidades e interfaces do dominio.
