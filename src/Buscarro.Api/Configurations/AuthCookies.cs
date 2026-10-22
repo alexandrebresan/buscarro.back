@@ -27,7 +27,7 @@ public static class AuthCookies
     {
         HttpOnly = true,
         Secure = true,
-        SameSite = SameSiteMode.Lax,
+        SameSite = SameSiteMode.None,
         Path = "/",
         IsEssential = true,
         Expires = expiresAtUtc.HasValue ? new DateTimeOffset(DateTime.SpecifyKind(expiresAtUtc.Value, DateTimeKind.Utc)) : null

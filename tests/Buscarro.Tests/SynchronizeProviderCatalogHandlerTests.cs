@@ -9,11 +9,71 @@ using Buscarro.Domain.Interfaces;
 using Buscarro.Domain.Enums;
 using System.Diagnostics.Metrics;
 using System.Collections.Concurrent;
+using Buscarro.Infrastructure.Providers;
 
 namespace Buscarro.Tests;
 
 public sealed class SynchronizeProviderCatalogHandlerTests
 {
+    [Fact]
+    public async Task AutoDev_missing_locations_are_counted_but_never_sent_to_writer()
+    {
+        var fixture = new Fixture(providerNormalizer: new AutoDevVehicleCatalogItemNormalizer(new ExchangeRates()));
+        var complete = Vehicle("complete", "Carro") with
+        {
+            City = "Mechanicsburg", State = "PA", Url = "https://dealer.example/complete", ImageUrl = "https://dealer.example/image.jpg"
+        };
+        fixture.Source.Pages.Enqueue(new(1, 1, 3, 1, 3,
+            [complete, complete with { ExternalId = "missing-city", City = null }, complete with { ExternalId = "missing-state", State = " " }]));
+        var result = await fixture.Handler.Handle(new("AutoDev"), TestContext.Current.CancellationToken);
+        Assert.Equal(3, result.SourceItemCount);
+        Assert.Equal(1, result.ValidItemCount);
+        Assert.Equal(2, result.InvalidItemCount);
+        var written = Assert.Single(fixture.Writer.Items);
+        Assert.Equal("complete", written.ExternalId);
+        Assert.Equal("AutoDev", written.Provider);
+        Assert.Equal("Mechanicsburg", written.City);
+        Assert.Equal("PA", written.State);
+        var generation = Assert.Single(fixture.Generations.Values);
+        Assert.Equal(CatalogGenerationStatus.Current, generation.Status);
+        Assert.Contains("\"autodev_city_missing\":1", generation.ValidationSummaryJson);
+        Assert.Contains("\"autodev_state_missing\":1", generation.ValidationSummaryJson);
+    }
+
+    [Fact]
+    public async Task AutoDev_all_missing_locations_cannot_publish_an_empty_catalog()
+    {
+        var fixture = new Fixture(providerNormalizer: new AutoDevVehicleCatalogItemNormalizer(new ExchangeRates()));
+        fixture.Source.Pages.Enqueue(new(1, 1, 1, 1, 1,
+            [Vehicle("no-location", "Carro") with { Url = "https://dealer.example/car", ImageUrl = "https://dealer.example/image.jpg" }]));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Handler.Handle(new("AutoDev"), TestContext.Current.CancellationToken));
+        Assert.Equal("catalog_no_valid_items", exception.Message);
+        Assert.Empty(fixture.Writer.Items);
+        Assert.Contains("autodev_city_missing", Assert.Single(fixture.Generations.Values).ValidationSummaryJson);
+        Assert.Equal(1, fixture.FailureRecorder.Calls);
+    }
+
+    [Fact]
+    public async Task AutoDev_location_rejections_preserve_previous_catalog_when_drop_guard_triggers()
+    {
+        var fixture = new Fixture(providerNormalizer: new AutoDevVehicleCatalogItemNormalizer(new ExchangeRates()));
+        var now = DateTimeOffset.UtcNow;
+        var previous = new CatalogGeneration("AutoDev", now);
+        previous.MarkReady(1, 10, 10, 0, 0, new string('a', 64), null, now);
+        previous.MarkCurrent(now);
+        fixture.Generations.Values.Add(previous);
+        var complete = Vehicle("complete", "Carro") with
+        {
+            City = "Mechanicsburg", State = "PA", Url = "https://dealer.example/car", ImageUrl = "https://dealer.example/image.jpg"
+        };
+        fixture.Source.Pages.Enqueue(new(1, 1, 2, 1, 2, [complete, complete with { ExternalId = "missing-city", City = null }]));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Handler.Handle(new("AutoDev"), TestContext.Current.CancellationToken));
+        Assert.Equal("catalog_drop_exceeded", exception.Message);
+        Assert.Equal(CatalogGenerationStatus.Current, previous.Status);
+        Assert.Equal("complete", Assert.Single(fixture.Writer.Items).ExternalId);
+        Assert.Equal(1, fixture.FailureRecorder.Calls);
+    }
+
     [Fact]
     public async Task Lock_contention_skips_without_creating_generation_or_reading_source()
     {
@@ -426,7 +486,8 @@ public sealed class SynchronizeProviderCatalogHandlerTests
             int maxPages = 50_000,
             int maxVehicles = 2_000_000,
             TimeSpan? timeout = null,
-            int? failOnSaveCall = null)
+            int? failOnSaveCall = null,
+            IVehicleCatalogItemNormalizer? providerNormalizer = null)
         {
             var options = new CatalogSynchronizationOptions
             {
@@ -434,7 +495,8 @@ public sealed class SynchronizeProviderCatalogHandlerTests
                 Timeout = timeout ?? TimeSpan.FromHours(2)
             };
             Source.IsPrepared = () => Normalizer.Prepares == 1;
-            Handler = new([Source], [Normalizer], new SyncLock(acquire), Writer, new CatalogSyncValidator(TimeProvider.System, options),
+            Source.Provider = providerNormalizer?.Provider ?? Normalizer.Provider;
+            Handler = new([Source], [providerNormalizer ?? Normalizer], new SyncLock(acquire), Writer, new CatalogSyncValidator(TimeProvider.System, options),
                 Generations, new UnitOfWork(failOnSaveCall), new Publisher(Generations, publishFailure), FailureRecorder,
                 options, TimeProvider.System);
         }
@@ -442,7 +504,7 @@ public sealed class SynchronizeProviderCatalogHandlerTests
 
     private sealed class Source : IVehicleCatalogSource
     {
-        public string Provider => "Carzin";
+        public string Provider { get; set; } = "Carzin";
         public Queue<CatalogSourcePage> Pages { get; } = new();
         public Exception? Exception { get; set; }
         public bool BlockUntilCanceled { get; set; }
@@ -486,6 +548,12 @@ public sealed class SynchronizeProviderCatalogHandlerTests
         public Task<IAsyncDisposable?> TryAcquireAsync(string provider, CancellationToken cancellationToken)
             => Task.FromResult<IAsyncDisposable?>(acquire ? new Lease() : null);
         private sealed class Lease : IAsyncDisposable { public ValueTask DisposeAsync() => ValueTask.CompletedTask; }
+    }
+
+    private sealed class ExchangeRates : IExchangeRateProvider
+    {
+        public Task<ExchangeRateQuote> GetUsdToBrlQuoteAsync(CancellationToken cancellationToken)
+            => Task.FromResult(new ExchangeRateQuote(1, new DateOnly(2026, 8, 22)));
     }
 
     private sealed class Writer : IVehicleCatalogBatchWriter

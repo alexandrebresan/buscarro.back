@@ -28,6 +28,9 @@ public sealed class AutoDevVehicleCatalogItemNormalizer(IExchangeRateProvider ex
             mileage = decimal.ToInt32(kilometers);
         }
 
+        if (string.IsNullOrWhiteSpace(source.City)) return CatalogItemNormalizationResult.Invalid("autodev_city_missing");
+        if (string.IsNullOrWhiteSpace(source.State)) return CatalogItemNormalizationResult.Invalid("autodev_state_missing");
+
         var title = string.Join(" ", new[] { source.Year?.ToString(System.Globalization.CultureInfo.InvariantCulture), source.Brand, source.Model, source.Version }
             .Where(value => !string.IsNullOrWhiteSpace(value)).Select(value => value!.Trim()));
         return CatalogItemNormalizationResult.Valid(source with

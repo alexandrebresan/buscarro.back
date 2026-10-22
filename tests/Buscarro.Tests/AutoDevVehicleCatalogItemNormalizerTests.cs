@@ -6,6 +6,36 @@ namespace Buscarro.Tests;
 
 public sealed class AutoDevVehicleCatalogItemNormalizerTests
 {
+    [Theory]
+    [InlineData(null, "PA", "autodev_city_missing")]
+    [InlineData("", "PA", "autodev_city_missing")]
+    [InlineData(" \t\n", "PA", "autodev_city_missing")]
+    [InlineData("Mechanicsburg", null, "autodev_state_missing")]
+    [InlineData("Mechanicsburg", "", "autodev_state_missing")]
+    [InlineData("Mechanicsburg", " \t\n", "autodev_state_missing")]
+    [InlineData(null, null, "autodev_city_missing")]
+    public async Task Rejects_missing_city_or_state_without_returning_a_vehicle(string? city, string? state, string reason)
+    {
+        var normalizer = new AutoDevVehicleCatalogItemNormalizer(new QuoteProvider(1));
+        await normalizer.PrepareAsync(TestContext.Current.CancellationToken);
+        var result = normalizer.Normalize(Vehicle() with { City = city, State = state });
+        Assert.False(result.IsValid);
+        Assert.Null(result.Vehicle);
+        Assert.Equal(reason, result.Reason);
+    }
+
+    [Fact]
+    public async Task Preserves_location_from_same_listing_when_complete()
+    {
+        var normalizer = new AutoDevVehicleCatalogItemNormalizer(new QuoteProvider(1));
+        await normalizer.PrepareAsync(TestContext.Current.CancellationToken);
+        var source = Vehicle();
+        var result = normalizer.Normalize(source);
+        Assert.True(result.IsValid);
+        Assert.Equal(source.City, result.Vehicle!.City);
+        Assert.Equal(source.State, result.Vehicle.State);
+    }
+
     [Fact]
     public async Task Normalizes_title_once_prepared_quote_and_rounds_brl()
     {
@@ -94,7 +124,7 @@ public sealed class AutoDevVehicleCatalogItemNormalizerTests
         Assert.Equal("autodev_mileage_invalid", result.Reason);
     }
 
-    private static CatalogSourceVehicle Vehicle() => new("vin", null, "Jeep", "Grand Cherokee", "4xe", null, null, null, 2024, null, null, null, null, null, null, 1, null, null, "not-url", "not-image");
+    private static CatalogSourceVehicle Vehicle() => new("vin", null, "Jeep", "Grand Cherokee", "4xe", null, null, null, 2024, null, null, null, null, null, null, 1, "Mechanicsburg", "PA", "not-url", "not-image");
     private sealed class QuoteProvider(decimal rate) : IExchangeRateProvider
     { public int Calls { get; private set; } public Task<ExchangeRateQuote> GetUsdToBrlQuoteAsync(CancellationToken cancellationToken) { Calls++; return Task.FromResult(new ExchangeRateQuote(rate, new DateOnly(2026, 8, 22))); } }
 }

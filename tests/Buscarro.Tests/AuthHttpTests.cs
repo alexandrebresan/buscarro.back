@@ -13,6 +13,43 @@ namespace Buscarro.Tests;
 public sealed class AuthHttpTests
 {
     [Fact]
+    public async Task Csrf_endpoint_emits_cross_site_host_only_secure_cookie()
+    {
+        await using var host = await AuthHttpFixture.StartAsync();
+        using var response = await host.GetAsync("/api/auth/csrf");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var header = Assert.Single(response.Headers.GetValues("Set-Cookie"), value => value.StartsWith("__Host-Buscarro.Csrf="));
+        var cookie = Microsoft.Net.Http.Headers.SetCookieHeaderValue.Parse(header);
+        Assert.Equal(Microsoft.Net.Http.Headers.SameSiteMode.None, cookie.SameSite);
+        Assert.True(cookie.Secure);
+        Assert.True(cookie.HttpOnly);
+        Assert.Equal("/", cookie.Path.ToString());
+        Assert.False(cookie.Domain.HasValue);
+        Assert.True(response.Headers.CacheControl?.NoStore);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("token").GetString()));
+
+        // The cookie alone never authorizes a POST without the request token.
+        using var withoutToken = await host.PostAsync("/api/auth/logout", new { });
+        Assert.Equal(HttpStatusCode.Forbidden, withoutToken.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Auth_posts_still_reject_missing_or_tampered_csrf_cookie(bool tampered)
+    {
+        await using var host = await AuthHttpFixture.StartAsync();
+        await host.BootstrapCsrfAsync();
+        if (tampered) host.Cookies["__Host-Buscarro.Csrf"] = "invalid-cookie";
+        else host.Cookies.Remove("__Host-Buscarro.Csrf");
+        using var response = await host.PostAsync("/api/auth/logout", new { });
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("csrf_invalid", problem.GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task Registration_refresh_and_logout_preserve_favorites_and_revoke_access()
     {
         await using var host = await AuthHttpFixture.StartAsync();

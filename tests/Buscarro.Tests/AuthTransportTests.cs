@@ -80,9 +80,41 @@ public sealed class AuthTransportTests
         Assert.Contains("__Host-Buscarro.Refresh=secret", header);
         Assert.Contains("secure", header);
         Assert.Contains("httponly", header);
-        Assert.Contains("samesite=lax", header);
+        Assert.Contains("samesite=none", header);
         Assert.Contains("path=/", header);
         Assert.DoesNotContain("domain=", header);
+    }
+
+    [Fact]
+    public void Google_browser_cookie_allows_cross_site_requests_without_widening_domain()
+    {
+        var context = new DefaultHttpContext();
+        var binding = AuthCookies.GetOrCreateBrowserBinding(context);
+        var cookie = Microsoft.Net.Http.Headers.SetCookieHeaderValue.Parse(context.Response.Headers.SetCookie.ToString());
+        Assert.Equal(AuthCookies.BrowserName, cookie.Name.ToString());
+        Assert.Equal(binding, cookie.Value.ToString());
+        Assert.Equal(64, binding.Length);
+        Assert.Equal(Microsoft.Net.Http.Headers.SameSiteMode.None, cookie.SameSite);
+        Assert.True(cookie.Secure);
+        Assert.True(cookie.HttpOnly);
+        Assert.Equal("/", cookie.Path.ToString());
+        Assert.False(cookie.Domain.HasValue);
+    }
+
+    [Fact]
+    public void Refresh_cookie_removal_preserves_cross_site_security_attributes()
+    {
+        var context = new DefaultHttpContext();
+        AuthCookies.ClearRefresh(context);
+        var cookie = Microsoft.Net.Http.Headers.SetCookieHeaderValue.Parse(context.Response.Headers.SetCookie.ToString());
+        Assert.Equal(AuthCookies.RefreshName, cookie.Name.ToString());
+        Assert.Equal(string.Empty, cookie.Value.ToString());
+        Assert.Equal(Microsoft.Net.Http.Headers.SameSiteMode.None, cookie.SameSite);
+        Assert.True(cookie.Secure);
+        Assert.True(cookie.HttpOnly);
+        Assert.Equal("/", cookie.Path.ToString());
+        Assert.False(cookie.Domain.HasValue);
+        Assert.True(cookie.Expires < DateTimeOffset.UtcNow);
     }
 
     private sealed class InspectingAntiforgery : IAntiforgery

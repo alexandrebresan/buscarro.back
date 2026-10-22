@@ -182,7 +182,7 @@ public static class ApiHostComposition
             options.Cookie.Name = "__Host-Buscarro.Csrf";
             options.Cookie.HttpOnly = true;
             options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-            options.Cookie.SameSite = SameSiteMode.Lax;
+            options.Cookie.SameSite = SameSiteMode.None;
             options.Cookie.Path = "/";
         });
         builder.Services.AddScoped<AuthAntiforgeryService>();
